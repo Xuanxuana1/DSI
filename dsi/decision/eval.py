@@ -21,7 +21,7 @@ from dsi.decision.readout import _run_feature_set, _seed_offset
 
 
 def _set_seed(seed: int, logger) -> None:
-    logger.info("开始固定随机源。seed=%s", int(seed))
+    logger.info("Setting random seeds. seed=%s", int(seed))
 
     random.seed(int(seed))
     np.random.seed(int(seed))
@@ -29,7 +29,7 @@ def _set_seed(seed: int, logger) -> None:
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(int(seed))
 
-    logger.info("随机源固定完成。seed=%s", int(seed))
+    logger.info("Random seeds set. seed=%s", int(seed))
 
 
 def main() -> None:
@@ -82,7 +82,7 @@ def main() -> None:
 
     log_path = None if args.log_path is None else str(resolve_path(args.log_path))
     logger = setup_logging(log_path)
-    logger.info("开始DSI posterior decision readout。seed=%s", int(args.seed))
+    logger.info("Running DSI posterior decision readout. seed=%s", int(args.seed))
     _set_seed(int(args.seed), logger)
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
@@ -92,7 +92,7 @@ def main() -> None:
     if not feature_sets:
         raise ValueError(f"No requested feature sets exist: {requested_feature_sets}")
 
-    logger.info("开始对齐DSI readout输入宽度。target=%s", args.feature_pad_dim)
+    logger.info("Aligning DSI readout input width. target=%s", args.feature_pad_dim)
 
     if args.feature_pad_dim is not None:
         target_dim = int(args.feature_pad_dim)
@@ -104,7 +104,7 @@ def main() -> None:
                 if target_dim > current_dim:
                     padding = np.zeros((matrix.shape[0], target_dim - current_dim), dtype=np.float32)
                     matrices[split] = np.concatenate([matrix, padding], axis=1).astype(np.float32, copy=False)
-    logger.info("DSI readout输入宽度对齐完成。")
+    logger.info("DSI readout input width aligned.")
 
     config, _ = load_dsi_config(args.base_config)
     processed_dir = Path(config["data"]["processed_dir"]).expanduser().resolve()
@@ -181,7 +181,7 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as handle:
         json.dump(serialized_output, handle, indent=2, ensure_ascii=False)
-    logger.info("DSI posterior decision readout完成。output=%s", output_path)
+    logger.info("DSI posterior decision readout complete. output=%s", output_path)
     print(json.dumps(serialized_output, indent=2, ensure_ascii=False))
 
 

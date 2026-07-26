@@ -8,7 +8,7 @@ class MultiLayerPerceptron(nn.Module):
     def __init__(self, input_dim: int, embed_dims: tuple[int, ...], dropout: float, output_layer: bool = True) -> None:
         super().__init__()
         logger = __import__("logging").getLogger(__name__)
-        logger.info("开始初始化MLP。input_dim=%d hidden=%s output_layer=%s", int(input_dim), embed_dims, output_layer)
+        logger.info("Initializing MLP. input_dim=%d hidden=%s output_layer=%s", int(input_dim), embed_dims, output_layer)
 
         layers: list[nn.Module] = []
         current_dim = int(input_dim)
@@ -22,7 +22,7 @@ class MultiLayerPerceptron(nn.Module):
         if output_layer:
             layers.append(nn.Linear(current_dim, 1))
         self.mlp = nn.Sequential(*layers)
-        logger.info("MLP初始化完成。")
+        logger.info("MLP initialized.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.mlp(x)
@@ -37,7 +37,7 @@ class MultiLayerPerceptronD2Q(nn.Module):
     def __init__(self, input_dim: int, embed_dims: tuple[int, ...], dropout: float, output_layer: bool = True) -> None:
         super().__init__()
         logger = __import__("logging").getLogger(__name__)
-        logger.info("开始初始化D2Q MLP。input_dim=%d hidden=%s", int(input_dim), embed_dims)
+        logger.info("Initializing D2Q MLP. input_dim=%d hidden=%s", int(input_dim), embed_dims)
 
         layers: list[nn.Module] = []
         current_dim = int(input_dim)
@@ -51,7 +51,7 @@ class MultiLayerPerceptronD2Q(nn.Module):
         if output_layer:
             layers.append(nn.Linear(current_dim, 1))
         self.mlp = nn.Sequential(*layers)
-        logger.info("D2Q MLP初始化完成。")
+        logger.info("D2Q MLP initialized.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.mlp(x)
@@ -61,7 +61,7 @@ class MultiLayerPerceptronTPM(nn.Module):
     def __init__(self, input_dim: int, embed_dims: tuple[int, ...], dropout: float, class_num: int, output_layer: bool = True) -> None:
         super().__init__()
         logger = __import__("logging").getLogger(__name__)
-        logger.info("开始初始化TPM MLP。input_dim=%d hidden=%s class_num=%d", int(input_dim), embed_dims, int(class_num))
+        logger.info("Initializing TPM MLP. input_dim=%d hidden=%s class_num=%d", int(input_dim), embed_dims, int(class_num))
 
         layers: list[nn.Module] = []
         current_dim = int(input_dim)
@@ -75,7 +75,7 @@ class MultiLayerPerceptronTPM(nn.Module):
         if output_layer:
             layers.append(nn.Linear(current_dim, int(class_num)))
         self.mlp = nn.Sequential(*layers)
-        logger.info("TPM MLP初始化完成。")
+        logger.info("TPM MLP initialized.")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.mlp(x)

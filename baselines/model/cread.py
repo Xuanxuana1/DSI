@@ -23,7 +23,7 @@ class Cread(nn.Module):
         dropout: float,
     ) -> None:
         super().__init__()
-        logger.info("开始初始化CREAD baseline。head_num=%d", int(head_num))
+        logger.info("Initializing CREAD baseline. head_num=%d", int(head_num))
 
         self.build(
             description,
@@ -33,7 +33,7 @@ class Cread(nn.Module):
             int(head_num),
             float(dropout),
         )
-        logger.info("CREAD baseline初始化完成。input_dim=%d", int(self.embed_output_dim))
+        logger.info("CREAD baseline initialized. input_dim=%d", int(self.embed_output_dim))
 
     def build(
         self,
@@ -44,7 +44,7 @@ class Cread(nn.Module):
         head_num: int,
         dropout: float,
     ) -> None:
-        logger.info("开始构造CREAD网络层。")
+        logger.info("Building CREAD layers.")
 
         self.encoder = FieldFeatureEncoder(description, int(embed_dim), continuous_mode="dense")
 
@@ -66,24 +66,24 @@ class Cread(nn.Module):
             )
             for _ in range(int(head_num))
         )
-        logger.info("CREAD网络层构造完成。")
+        logger.info("CREAD layers built.")
 
     def init(self) -> None:
-        logger.info("开始初始化CREAD参数。")
+        logger.info("Initializing CREAD parameters.")
 
         for parameter in self.parameters():
             nn.init.uniform_(parameter, -0.01, 0.01)
-        logger.info("CREAD参数初始化完成。")
+        logger.info("CREAD parameters initialized.")
 
     def forward_with_hidden(self, x_dict: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-        logger.debug("开始执行CREAD前向。")
+        logger.debug("Running the CREAD forward pass.")
 
         encoded, _ = self.encoder(x_dict)
         shared = self.share_mlp(encoded)
 
         outputs = [output_mlp(shared) for output_mlp in self.output_mlps]
         result = torch.sigmoid(torch.cat(outputs, dim=1))
-        logger.debug("CREAD前向完成。heads=%d", int(result.shape[1]))
+        logger.debug("CREAD forward pass complete. heads=%d", int(result.shape[1]))
         return result, shared
 
     def forward(self, x_dict: dict[str, torch.Tensor]) -> torch.Tensor:

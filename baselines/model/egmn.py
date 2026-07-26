@@ -23,7 +23,7 @@ class EGMN(nn.Module):
         components: int = 10,
     ) -> None:
         super().__init__()
-        logger.info("开始初始化EGMN baseline。components=%d", int(components))
+        logger.info("Initializing EGMN baseline. components=%d", int(components))
 
         self.components = int(components)
         self.encoder = FieldFeatureEncoder(description, embed_dim, continuous_mode="dense")
@@ -34,7 +34,7 @@ class EGMN(nn.Module):
         self.mixture_logits = nn.Linear(hidden_dim, self.components + 1)
         self.gauss_mu = nn.Sequential(nn.Linear(hidden_dim, self.components), nn.Softplus())
         self.gauss_sigma = nn.Sequential(nn.Linear(hidden_dim, self.components), nn.Softplus())
-        logger.info("EGMN baseline初始化完成。input_dim=%d", self.encoder.output_dim)
+        logger.info("EGMN baseline initialized. input_dim=%d", self.encoder.output_dim)
 
     def forward_with_hidden(self, x_dict: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
@@ -52,7 +52,7 @@ class EGMN(nn.Module):
         return pi, lambda_, mu, sigma
 
     def loss(self, y_true: torch.Tensor, pi: torch.Tensor, lambda_: torch.Tensor, mu: torch.Tensor, sigma: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        logger.debug("开始计算EGMN loss。")
+        logger.debug("Computing EGMN loss.")
 
         batch_size = y_true.shape[0]
         target = y_true.view(-1, 1)
@@ -76,7 +76,7 @@ class EGMN(nn.Module):
         pred = torch.sum(mix_probs * torch.cat([1.0 / lambda_, mu], dim=1), dim=1, keepdim=True)
         reg = F.l1_loss(pred, target.float())
         entropy = -torch.sum(mix_probs * torch.log(mix_probs + 1e-6), dim=1).mean()
-        logger.debug("EGMN loss计算完成。nll=%.6f reg=%.6f", float(nll.detach().cpu().item()), float(reg.detach().cpu().item()))
+        logger.debug("EGMN loss computed. nll=%.6f reg=%.6f", float(nll.detach().cpu().item()), float(reg.detach().cpu().item()))
         return nll, reg, entropy
 
     def predict(self, x_dict: dict[str, torch.Tensor]) -> torch.Tensor:

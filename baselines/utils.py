@@ -65,7 +65,7 @@ def _count_descending_label_pairs(values: np.ndarray) -> int:
 
 
 def eval_xauc(labels: np.ndarray, scores: np.ndarray) -> float:
-    logger.info("开始计算XAUC。rows=%d", int(labels.reshape(-1).shape[0]))
+    logger.info("Computing XAUC. rows=%d", int(labels.reshape(-1).shape[0]))
 
     order = np.argsort(-scores.reshape(-1), kind="mergesort")
     sorted_labels = labels.reshape(-1)[order]
@@ -73,10 +73,10 @@ def eval_xauc(labels: np.ndarray, scores: np.ndarray) -> float:
     work = sorted_labels.astype(np.float64, copy=True)
     pairs = len(work) * (len(work) - 1) / 2.0
     if pairs <= 0:
-        logger.info("XAUC计算完成。xauc=0.000000")
+        logger.info("XAUC computed. xauc=0.000000")
         return 0.0
     xauc = float(_count_descending_label_pairs(work) / pairs)
-    logger.info("XAUC计算完成。xauc=%.6f", xauc)
+    logger.info("XAUC computed. xauc=%.6f", xauc)
     return xauc
 
 
@@ -87,13 +87,13 @@ def eval_binary_auc(labels: np.ndarray, scores: np.ndarray) -> float:
 
 
 def get_playtime_percentiles_range(labels: np.ndarray, bucket_num: int, device: torch.device) -> tuple[torch.Tensor, torch.Tensor]:
-    logger.info("开始计算TPM分位桶。bucket_num=%d", int(bucket_num))
+    logger.info("Computing TPM quantile buckets. bucket_num=%d", int(bucket_num))
 
     percentiles = np.percentile(labels.reshape(-1), np.linspace(0.0, 100.0, int(bucket_num) + 1).astype(np.float32))
 
     begins = torch.tensor(percentiles[:-1], dtype=torch.float32, device=device).view(1, -1)
     ends = torch.tensor(percentiles[1:], dtype=torch.float32, device=device).view(1, -1)
-    logger.info("TPM分位桶计算完成。min=%.4f max=%.4f", float(percentiles[0]), float(percentiles[-1]))
+    logger.info("TPM quantile buckets computed. min=%.4f max=%.4f", float(percentiles[0]), float(percentiles[-1]))
     return begins, ends
 
 
@@ -160,24 +160,24 @@ def get_tree_encoded_value(pred: torch.Tensor, tree_num_intervals: int, begins: 
 
 
 def duration_quantile_edges(durations: np.ndarray, bucket_num: int) -> np.ndarray:
-    logger.info("开始计算duration等频桶边界。bucket_num=%d", int(bucket_num))
+    logger.info("Computing equal-frequency duration-bucket boundaries. bucket_num=%d", int(bucket_num))
 
     values = np.asarray(durations, dtype=np.float64).reshape(-1)
     values = values[np.isfinite(values)]
     if values.size == 0 or int(bucket_num) <= 1:
-        logger.info("duration等频桶边界计算完成。actual_buckets=1")
+        logger.info("Equal-frequency duration-bucket boundaries computed. actual_buckets=1")
         return np.zeros((0,), dtype=np.float32)
 
     probs = np.linspace(0.0, 1.0, int(bucket_num) + 1)
     raw_edges = np.quantile(values, probs)
 
     finite_edges = np.unique(raw_edges[1:-1][np.isfinite(raw_edges[1:-1])]).astype(np.float32)
-    logger.info("duration等频桶边界计算完成。requested=%d actual_buckets=%d", int(bucket_num), int(finite_edges.size + 1))
+    logger.info("Equal-frequency duration-bucket boundaries computed. requested=%d actual_buckets=%d", int(bucket_num), int(finite_edges.size + 1))
     return finite_edges
 
 
 def build_quantile_table(labels: np.ndarray, durations: np.ndarray, bucket_num: int, quantile_bins: int) -> tuple[np.ndarray, np.ndarray]:
-    logger.info("开始构造分位辅助表。bucket_num=%d quantile_bins=%d", int(bucket_num), int(quantile_bins))
+    logger.info("Building the quantile auxiliary table. bucket_num=%d quantile_bins=%d", int(bucket_num), int(quantile_bins))
 
     finite_edges = duration_quantile_edges(durations, int(bucket_num))
     bucket_ids = np.searchsorted(finite_edges, durations.reshape(-1), side="left").astype(np.int64)
@@ -192,7 +192,7 @@ def build_quantile_table(labels: np.ndarray, durations: np.ndarray, bucket_num: 
             values = labels
         quantiles[idx] = np.quantile(values.reshape(-1), grid).astype(np.float32)
 
-    logger.info("分位辅助表构造完成。buckets=%d", actual_bucket_num)
+    logger.info("Quantile auxiliary table built. buckets=%d", actual_bucket_num)
     return finite_edges, quantiles
 
 

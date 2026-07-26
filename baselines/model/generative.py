@@ -43,7 +43,7 @@ def _pad_cards(values: list[int], target: int) -> list[int]:
 class PackedSlotEncoder(nn.Module):
     def __init__(self, description: list[tuple[str, Any, str]], feat_dim: int, duration_buckets: int, include_duration_in_item: bool = False) -> None:
         super().__init__()
-        logger.info("开始初始化生成式baseline槽位编码器。feat_dim=%d duration_buckets=%d", int(feat_dim), int(duration_buckets))
+        logger.info("Initializing the generative baseline slot encoder. feat_dim=%d duration_buckets=%d", int(feat_dim), int(duration_buckets))
 
         self.feat_dim = int(feat_dim)
         self.include_duration_in_item = bool(include_duration_in_item)
@@ -62,10 +62,10 @@ class PackedSlotEncoder(nn.Module):
         self.item_id_embedding = nn.Embedding(self.item_id_card, self.feat_dim)
         self.item_fea_embedding = nn.Embedding(self.item_feature_card, self.feat_dim)
         self.item_duration_embedding = nn.Embedding(self.duration_card, self.feat_dim)
-        logger.info("生成式baseline槽位编码器初始化完成。")
+        logger.info("Generative baseline slot encoder initialized.")
 
     def _pack_slots(self, features: dict[str, torch.Tensor], duration_bucket: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        logger.debug("开始打包生成式baseline槽位。")
+        logger.debug("Packing generative baseline slots.")
 
         batch_size = int(features["user_id"].shape[0])
         device = features["user_id"].device
@@ -91,11 +91,11 @@ class PackedSlotEncoder(nn.Module):
                 x[:, 20 + idx] = value
                 i_mask[:, idx + 1] = (value > 0).float()
         x[:, 24] = duration_bucket.view(-1).long().clamp(0, self.duration_card - 1)
-        logger.debug("生成式baseline槽位打包完成。")
+        logger.debug("Generative baseline slots packed.")
         return x, q_mask, i_mask
 
     def encode_source(self, features: dict[str, torch.Tensor], duration_bucket: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        logger.debug("开始编码生成式baseline源特征。")
+        logger.debug("Encoding generative baseline source features.")
 
         x, q_mask, i_mask = self._pack_slots(features, duration_bucket)
 
@@ -117,7 +117,7 @@ class PackedSlotEncoder(nn.Module):
             i_weight = torch.cat([i_weight, torch.ones_like(i_weight[:, :1])], dim=1)
         query_sum = (user_stack * q_weight).sum(dim=1) / q_weight.sum(dim=1).clamp_min(1.0)
         item_sum = (item_stack * i_weight).sum(dim=1) / i_weight.sum(dim=1).clamp_min(1.0)
-        logger.debug("生成式baseline源特征编码完成。")
+        logger.debug("Generative baseline source features encoded.")
         return query_sum, item_sum, item_duration.sum(dim=1), x
 
 
@@ -263,13 +263,13 @@ class GR(nn.Module):
         use_embedding_mixup: bool = False,
     ) -> None:
         super().__init__()
-        logger.info("开始初始化GR baseline。vocab_size=%d", int(vocab_size))
+        logger.info("Initializing GR baseline. vocab_size=%d", int(vocab_size))
         self.slot_encoder = PackedSlotEncoder(description, feat_dim, duration_buckets, include_duration_in_item=True)
         self.encoder = GRSourceEncoder(feat_dim, hidden_dim, dropout)
         self.decoder = GRDecoder(vocab_size, hidden_dim, ffn_dim, n_head, decoder_layers, dropout)
         self.use_embedding_mixup = bool(use_embedding_mixup)
         self.device_ref: torch.device | None = None
-        logger.info("GR baseline初始化完成。")
+        logger.info("GR baseline initialized.")
 
     def make_trg_mask(self, trg: torch.Tensor, trg_pad_mask: torch.Tensor) -> torch.Tensor:
         device = trg.device
@@ -292,7 +292,7 @@ class GR(nn.Module):
         true_label_mask: torch.Tensor,
         teacher_force_ratio: float,
     ) -> torch.Tensor:
-        logger.debug("开始执行GR前向。")
+        logger.debug("Running the GR forward pass.")
         enc_src, src_mask = self.get_encoder_result(features, duration_bucket)
         trg_mask = self.make_trg_mask(trg, true_label_mask)
         output, _ = self.decoder(trg, enc_src, trg_mask, src_mask)
@@ -307,11 +307,11 @@ class GR(nn.Module):
         if not self.use_embedding_mixup:
             input_teacher = torch.cat(input_teacher, dim=1)
         output, _ = self.decoder.weight_forward(input_teacher, enc_src, trg_mask, src_mask, self.use_embedding_mixup)
-        logger.debug("GR前向完成。")
+        logger.debug("GR forward pass complete.")
         return output
 
     def autoregressive_logits(self, features: dict[str, torch.Tensor], duration_bucket: torch.Tensor, max_len: int) -> torch.Tensor:
-        logger.debug("开始执行GR自回归推理。max_len=%d", int(max_len))
+        logger.debug("Running GR autoregressive inference. max_len=%d", int(max_len))
         enc_src, src_mask = self.get_encoder_result(features, duration_bucket)
         batch_size = int(features["user_id"].shape[0])
         device = features["user_id"].device
@@ -330,7 +330,7 @@ class GR(nn.Module):
             tokens = torch.cat([tokens, next_word], dim=1)
             mixed_inputs.append(step_logits if self.use_embedding_mixup else next_word)
             outputs.append(step_logits.unsqueeze(1))
-        logger.debug("GR自回归推理完成。")
+        logger.debug("GR autoregressive inference complete.")
         return torch.cat(outputs, dim=1)
 
 
@@ -351,7 +351,7 @@ class CrossNetwork(nn.Module):
 class DIFL(nn.Module):
     def __init__(self, description: list[tuple[str, Any, str]], duration_buckets: int, feat_dim: int = 32, dropout: float = 0.0) -> None:
         super().__init__()
-        logger.info("开始初始化DIFL baseline。feat_dim=%d", int(feat_dim))
+        logger.info("Initializing DIFL baseline. feat_dim=%d", int(feat_dim))
         self.feat_dim = int(feat_dim)
         self.slot_encoder = PackedSlotEncoder(description, feat_dim, duration_buckets)
         hidden_dim = int(feat_dim) * 2
@@ -375,10 +375,10 @@ class DIFL(nn.Module):
         self.fc3 = nn.Linear(512, 256)
         self.fc4 = nn.Linear(256, 1)
         self.dropout = nn.Dropout(float(dropout))
-        logger.info("DIFL baseline初始化完成。")
+        logger.info("DIFL baseline initialized.")
 
     def forward(self, features: dict[str, torch.Tensor], duration_bucket: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        logger.debug("开始执行DIFL前向。")
+        logger.debug("Running the DIFL forward pass.")
         query_sum, item_sum, item_duration, _ = self.slot_encoder.encode_source(features, duration_bucket)
         x = torch.cat([query_sum, item_sum], dim=1)
         cross = self.cn(x)
@@ -391,7 +391,7 @@ class DIFL(nn.Module):
         out = self.dropout(out)
         out = F.relu(self.fc3(out))
         logits = self.fc4(out)
-        logger.debug("DIFL前向完成。")
+        logger.debug("DIFL forward pass complete.")
         return representation, torch.sigmoid(logits)
 
     def forward_with_hidden(self, features: dict[str, torch.Tensor], duration_bucket: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:

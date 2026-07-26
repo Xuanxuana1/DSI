@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 def _source_args(source: str) -> argparse.Namespace:
-    logger.info("开始构造transfer baseline配置。source=%s", source)
+    logger.info("Building the transfer-baseline configuration. source=%s", source)
 
     namespace = argparse.Namespace(
         baseline=str(source),
@@ -65,12 +65,12 @@ def _source_args(source: str) -> argparse.Namespace:
     )
     result = _baseline_namespace(namespace, str(source))
     apply_baseline_defaults(result)
-    logger.info("transfer baseline配置构造完成。source=%s", source)
+    logger.info("Transfer-baseline configuration built. source=%s", source)
     return result
 
 
 def _label_payload_from_npz(npz: np.lib.npyio.NpzFile, ratio_threshold: float) -> dict[str, np.ndarray]:
-    logger.info("开始构造transfer标签。")
+    logger.info("Building transfer labels.")
 
     event = np.asarray(npz["watch_event"], dtype=np.int64)
     play_time = np.asarray(npz["play_time_sec"], dtype=np.float32).clip(min=0.0)
@@ -85,12 +85,12 @@ def _label_payload_from_npz(npz: np.lib.npyio.NpzFile, ratio_threshold: float) -
         "engagement": np.asarray(npz["engagement_mark"], dtype=np.float32),
         "session_key": np.asarray(npz["session_key"], dtype=np.int64),
     }
-    logger.info("transfer标签构造完成。rows=%d", int(event.shape[0]))
+    logger.info("Transfer labels built. rows=%d", int(event.shape[0]))
     return result
 
 
 def _load_dsi_source(args: argparse.Namespace) -> tuple[dict[str, np.ndarray], dict[str, dict[str, np.ndarray]], dict[str, np.ndarray]]:
-    logger.info("开始加载DSI transfer表示。")
+    logger.info("Loading DSI transfer representations.")
 
     report = json.loads(resolve_path(args.dsi_report).read_text(encoding="utf-8"))
     cache_path = resolve_path(report["metadata"]["feature_cache"]["path"])
@@ -122,12 +122,12 @@ def _load_dsi_source(args: argparse.Namespace) -> tuple[dict[str, np.ndarray], d
     for split in ("train", "val", "test"):
         with np.load(processed / f"standard_{split}.npz", allow_pickle=False) as npz:
             labels[split] = _label_payload_from_npz(npz, float(args.ratio_threshold))
-    logger.info("DSI transfer表示加载完成。dim=%d", int(matrices["train"].shape[1]))
+    logger.info("DSI transfer representations loaded. dim=%d", int(matrices["train"].shape[1]))
     return matrices, labels, zero_scores
 
 
 def _load_raw_source(args: argparse.Namespace) -> tuple[dict[str, np.ndarray], dict[str, dict[str, np.ndarray]], None]:
-    logger.info("开始加载raw-only transfer表示。")
+    logger.info("Loading raw-only transfer representations.")
 
     report = json.loads(resolve_path(args.dsi_report).read_text(encoding="utf-8"))
     cache_path = resolve_path(report["metadata"]["feature_cache"]["path"])
@@ -149,12 +149,12 @@ def _load_raw_source(args: argparse.Namespace) -> tuple[dict[str, np.ndarray], d
         with np.load(processed / f"standard_{split}.npz", allow_pickle=False) as npz:
             labels[split] = _label_payload_from_npz(npz, float(args.ratio_threshold))
 
-    logger.info("raw-only transfer表示加载完成。raw_dim=%d input_dim=%d", int(raw["train"].shape[1]), int(matrices["train"].shape[1]))
+    logger.info("Raw-only transfer representations loaded. raw_dim=%d input_dim=%d", int(raw["train"].shape[1]), int(matrices["train"].shape[1]))
     return matrices, labels, None
 
 
 def _load_random_dsi_source(args: argparse.Namespace, device: torch.device) -> tuple[dict[str, np.ndarray], dict[str, dict[str, np.ndarray]], None]:
-    logger.info("开始加载随机provider transfer表示。seed=%d", int(args.seed))
+    logger.info("Loading random-provider transfer representations. seed=%d", int(args.seed))
 
     report = json.loads(resolve_path(args.dsi_report).read_text(encoding="utf-8"))
     cache_path = resolve_path(report["metadata"]["feature_cache"]["path"])
@@ -212,12 +212,12 @@ def _load_random_dsi_source(args: argparse.Namespace, device: torch.device) -> t
         with np.load(processed / f"standard_{split}.npz", allow_pickle=False) as npz:
             labels[split] = _label_payload_from_npz(npz, float(args.ratio_threshold))
 
-    logger.info("随机provider transfer表示加载完成。posterior_dim=%d input_dim=%d", int(posterior["train"].shape[1]), int(matrices["train"].shape[1]))
+    logger.info("Random-provider transfer representations loaded. posterior_dim=%d input_dim=%d", int(posterior["train"].shape[1]), int(matrices["train"].shape[1]))
     return matrices, labels, None
 
 
 def _load_baseline_source(args: argparse.Namespace, source: str, device: torch.device) -> tuple[dict[str, np.ndarray], dict[str, dict[str, np.ndarray]], dict[str, np.ndarray]]:
-    logger.info("开始加载baseline transfer表示。source=%s", source)
+    logger.info("Loading baseline transfer representations. source=%s", source)
 
     config, _ = load_config(args.config)
     baseline_args = _source_args(source)
@@ -247,7 +247,7 @@ def _load_baseline_source(args: argparse.Namespace, source: str, device: torch.d
         labels[split]["ratio_threshold"] = (
             labels[split]["play_time"] / np.maximum(labels[split]["duration_sec"], 1e-6) > float(args.ratio_threshold)
         ).astype(np.float32)
-    logger.info("baseline transfer表示加载完成。source=%s dim=%d", source, int(matrices["train"].shape[1]))
+    logger.info("Baseline transfer representations loaded. source=%s dim=%d", source, int(matrices["train"].shape[1]))
     return matrices, labels, zero_scores
 
 
@@ -276,16 +276,16 @@ class MLPTransferHead(nn.Module):
 
 
 def _fraction_indices(row_count: int, fraction: float, seed: int) -> np.ndarray | None:
-    logger.info("开始构造低样本标签集。fraction=%.4f", float(fraction))
+    logger.info("Building the low-sample label set. fraction=%.4f", float(fraction))
 
     if float(fraction) >= 1.0:
-        logger.info("低样本标签集构造完成。rows=%d", int(row_count))
+        logger.info("Low-sample label set built. rows=%d", int(row_count))
         return None
 
     rows = max(1, int(round(float(row_count) * float(fraction))))
     rng = np.random.default_rng(int(seed))
     result = np.sort(rng.choice(int(row_count), size=rows, replace=False).astype(np.int64))
-    logger.info("低样本标签集构造完成。rows=%d", int(rows))
+    logger.info("Low-sample label set built. rows=%d", int(rows))
     return result
 
 
@@ -324,7 +324,7 @@ def _fit_transfer_probe(
     device: torch.device,
     seed: int,
 ) -> tuple[nn.Module, list[dict[str, float]]]:
-    logger.info("开始训练transfer head。task=%s head=%s", task, str(args.head))
+    logger.info("Training the transfer head. task=%s head=%s", task, str(args.head))
 
     set_seed(int(seed))
     if str(args.head) == "linear":
@@ -382,7 +382,7 @@ def _fit_transfer_probe(
                     }
                 )
                 logger.info(
-                    "transfer head收敛检查。task=%s head=%s step=%d train_loss=%.6f val_%s=%.6f",
+                    "Transfer-head convergence check. task=%s head=%s step=%d train_loss=%.6f val_%s=%.6f",
                     task,
                     str(args.head),
                     int(step),
@@ -400,12 +400,12 @@ def _fit_transfer_probe(
 
     if best_state is not None:
         model.load_state_dict(best_state)
-    logger.info("transfer head训练完成。task=%s head=%s best=%.6f", task, str(args.head), best_value)
+    logger.info("Transfer-head training complete. task=%s head=%s best=%.6f", task, str(args.head), best_value)
     return model, trace
 
 
 def _zero_parameter_metrics(scores: dict[str, np.ndarray], labels: dict[str, np.ndarray]) -> dict[str, Any]:
-    logger.info("开始评估零参数决策分数。")
+    logger.info("Evaluating zero-parameter decision scores.")
 
     result: dict[str, Any] = {}
     for task in ("long", "overplay"):
@@ -414,12 +414,12 @@ def _zero_parameter_metrics(scores: dict[str, np.ndarray], labels: dict[str, np.
             "ndcg@5": session_ndcg_metrics(labels["session_key"], scores[task], labels[task], ks=(5,))["ndcg@5"],
             "top5_positive_rate": topk_session_value(scores[task], labels[task], labels["session_key"], 5)["value"],
         }
-    logger.info("零参数决策分数评估完成。")
+    logger.info("Zero-parameter decision-score evaluation complete.")
     return result
 
 
 def _run_transfer(args: argparse.Namespace, source: str, matrices: dict[str, np.ndarray], labels: dict[str, dict[str, np.ndarray]], zero_scores: dict[str, np.ndarray] | None, device: torch.device) -> dict[str, Any]:
-    logger.info("开始运行transfer实验。source=%s", source)
+    logger.info("Running the transfer experiment. source=%s", source)
 
     train_x, val_x, test_x = _standardize(matrices["train"], matrices["val"], matrices["test"])
     zero_result = None if zero_scores is None else _zero_parameter_metrics(zero_scores, labels["test"])
@@ -520,7 +520,7 @@ def _run_transfer(args: argparse.Namespace, source: str, matrices: dict[str, np.
         })
         fractions[key] = fraction_result
 
-    logger.info("transfer实验运行完成。source=%s", source)
+    logger.info("Transfer experiment complete. source=%s", source)
     return {"source": source, "input_dim": int(train_x.shape[1]), "zero_parameter": zero_result, "fractions": fractions}
 
 
@@ -568,7 +568,7 @@ def main() -> None:
         raise ValueError("--engagement-only requires --engagement-probe")
 
     setup_logger(None if args.log_path is None else resolve_path(args.log_path))
-    logger.info("开始transfer probe。source=%s seed=%d", args.source, int(args.seed))
+    logger.info("Running the transfer probe. source=%s seed=%d", args.source, int(args.seed))
 
     random.seed(int(args.seed))
     np.random.seed(int(args.seed))
@@ -609,7 +609,7 @@ def main() -> None:
     output_path = resolve_path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(serialized_result, indent=2, ensure_ascii=False), encoding="utf-8")
-    logger.info("transfer probe完成。output=%s", output_path)
+    logger.info("Transfer probe complete. output=%s", output_path)
     print(json.dumps(serialized_result, indent=2, ensure_ascii=False))
 
 

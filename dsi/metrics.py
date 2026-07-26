@@ -139,7 +139,7 @@ def evaluate_model_light(
     primary_metric: str = "competing_risk_nll",
 ) -> EvalResult:
     logger = __import__("logging").getLogger(__name__)
-    logger.info("开始执行DSI轻量评估。rows=%s", len(loader.dataset))
+    logger.info("Running lightweight DSI evaluation. rows=%s", len(loader.dataset))
 
     model.eval()
     started_at = time.time()
@@ -231,7 +231,7 @@ def evaluate_model_light(
         "eval_rows_per_second": float(nll_count / elapsed),
         "light_eval": True,
     }
-    logger.info("DSI轻量评估完成。rows=%s primary_nll=%.6f", int(nll_count), metrics["primary_nll"])
+    logger.info("Lightweight DSI evaluation complete. rows=%s primary_nll=%.6f", int(nll_count), metrics["primary_nll"])
     return EvalResult(metrics=metrics, arrays={})
 
 

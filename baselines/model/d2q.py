@@ -20,12 +20,12 @@ class D2Q(nn.Module):
         dropout: float,
     ) -> None:
         super().__init__()
-        logger.info("开始初始化D2Q baseline。")
+        logger.info("Initializing D2Q baseline.")
 
         self.encoder = FieldFeatureEncoder(description, int(embed_dim), continuous_mode="dense")
 
         self.mlp = MultiLayerPerceptronD2Q(self.encoder.output_dim, mlp_dims, dropout)
-        logger.info("D2Q baseline初始化完成。input_dim=%d", self.encoder.output_dim)
+        logger.info("D2Q baseline initialized. input_dim=%d", self.encoder.output_dim)
 
     def forward_with_hidden(self, x_dict: dict[str, torch.Tensor]):
 

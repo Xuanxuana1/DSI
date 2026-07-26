@@ -16,7 +16,7 @@ def feature_sizes(description: list[tuple[str, Any, str]]) -> dict[str, tuple[An
 class DictFeatureEncoder(nn.Module):
     def __init__(self, description: list[tuple[str, Any, str]], embed_dim: int, include_ctn_linear: bool) -> None:
         super().__init__()
-        logger.info("开始初始化baseline特征编码器。embed_dim=%d include_ctn_linear=%s", int(embed_dim), include_ctn_linear)
+        logger.info("Initializing the baseline feature encoder. embed_dim=%d include_ctn_linear=%s", int(embed_dim), include_ctn_linear)
 
         self.spec = feature_sizes(description)
         self.sparse_names = [name for name, (_, kind) in self.spec.items() if kind == "spr"]
@@ -51,7 +51,7 @@ class DictFeatureEncoder(nn.Module):
         self.output_dim = self.embedding_output_dim + self.sparse_vec_output_dim + self.sequence_output_dim + self.ctn_vec_dim + self.ctn_dim
         self.linear_dim = self.ctn_vec_dim + self.ctn_dim if self.include_ctn_linear else 0
         logger.info(
-            "baseline特征编码器初始化完成。sparse=%d sparse_vec_dim=%d seq_dim=%d ctn_vec_dim=%d ctn_dim=%d output_dim=%d",
+            "Baseline feature encoder initialized. sparse=%d sparse_vec_dim=%d seq_dim=%d ctn_vec_dim=%d ctn_dim=%d output_dim=%d",
             len(self.sparse_names),
             self.sparse_vec_output_dim,
             self.sequence_output_dim,
@@ -61,7 +61,7 @@ class DictFeatureEncoder(nn.Module):
         )
 
     def forward(self, x_dict: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor | None]:
-        logger.debug("开始编码baseline输入特征。")
+        logger.debug("Encoding baseline input features.")
 
         parts = [
             self.emb_layer[name](x_dict[name].view(-1)).view(x_dict[name].shape[0], -1)
@@ -108,14 +108,14 @@ class DictFeatureEncoder(nn.Module):
 
         dense = torch.cat(parts, dim=1) if parts else x_dict["duration"].new_zeros((x_dict["duration"].shape[0], 0))
         linear = ctn if self.include_ctn_linear else None
-        logger.debug("baseline输入特征编码完成。dense_dim=%d", int(dense.shape[1]))
+        logger.debug("Baseline input features encoded. dense_dim=%d", int(dense.shape[1]))
         return dense, linear
 
 
 class FieldFeatureEncoder(nn.Module):
     def __init__(self, description: list[tuple[str, Any, str]], embed_dim: int, continuous_mode: str = "dense") -> None:
         super().__init__()
-        logger.info("开始初始化字段编码器。embed_dim=%d mode=%s", int(embed_dim), str(continuous_mode))
+        logger.info("Initializing the field encoder. embed_dim=%d mode=%s", int(embed_dim), str(continuous_mode))
 
         if str(continuous_mode) not in {"dense", "wide"}:
             raise ValueError(f"unsupported continuous_mode={continuous_mode}")
@@ -164,10 +164,10 @@ class FieldFeatureEncoder(nn.Module):
 
         self.output_dim = int(dense_dim)
         self.linear_dim = int(linear_dim)
-        logger.info("字段编码器初始化完成。dense_dim=%d linear_dim=%d", self.output_dim, self.linear_dim)
+        logger.info("Field encoder initialized. dense_dim=%d linear_dim=%d", self.output_dim, self.linear_dim)
 
     def forward(self, x_dict: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor | None]:
-        logger.debug("开始编码baseline字段输入。")
+        logger.debug("Encoding baseline field inputs.")
 
         dense_parts: list[torch.Tensor] = []
         linear_parts: list[torch.Tensor] = []
@@ -210,7 +210,7 @@ class FieldFeatureEncoder(nn.Module):
         batch_size = int(x_dict["duration"].shape[0])
         dense = torch.cat(dense_parts, dim=1) if dense_parts else x_dict["duration"].new_zeros((batch_size, 0))
         linear = torch.cat(linear_parts, dim=1) if linear_parts else None
-        logger.debug("baseline字段输入编码完成。dense_dim=%d", int(dense.shape[1]))
+        logger.debug("Baseline field inputs encoded. dense_dim=%d", int(dense.shape[1]))
         return dense, linear
 
     @staticmethod

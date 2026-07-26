@@ -104,19 +104,19 @@ def _model_state_dict(model: torch.nn.Module) -> dict[str, torch.Tensor]:
 
 
 def _load_model_state_dict(model: torch.nn.Module, state_dict: dict[str, torch.Tensor]) -> None:
-    logger.info("开始加载模型权重。")
+    logger.info("Loading model weights.")
 
     target = model.module if isinstance(model, DistributedDataParallel) else model
 
     result = target.load_state_dict(state_dict, strict=False)
     if result.missing_keys or result.unexpected_keys:
         logger.info(
-            "模型权重非严格加载完成。missing=%s unexpected=%s",
+            "Model weights loaded non-strictly. missing=%s unexpected=%s",
             list(result.missing_keys),
             list(result.unexpected_keys),
         )
     else:
-        logger.info("模型权重加载完成。")
+        logger.info("Model weights loaded.")
 
 
 def _make_loaders(config: dict[str, Any], processed_dir: Path, ddp_ctx: dict[str, Any] | None = None) -> dict[str, DataLoader]:
@@ -221,10 +221,10 @@ def _build_model(model_type: str, manifest: dict[str, Any], config: dict[str, An
 
 
 def _duration_bucket_edges_from_train(processed_dir: Path, bucket_count: int, logger) -> list[float]:
-    logger.info("开始计算provider duration-local ratio边界。buckets=%s", int(bucket_count))
+    logger.info("Computing provider duration-local ratio boundaries. buckets=%s", int(bucket_count))
 
     if int(bucket_count) <= 1:
-        logger.info("provider duration-local ratio边界为空。")
+        logger.info("Provider duration-local ratio boundaries are empty.")
         return []
 
     train_path = processed_dir / "standard_train.npz"
@@ -233,19 +233,19 @@ def _duration_bucket_edges_from_train(processed_dir: Path, bucket_count: int, lo
     values = values[np.isfinite(values)]
 
     if values.size == 0:
-        logger.info("provider duration-local ratio边界为空。reason=no_duration")
+        logger.info("Provider duration-local ratio boundaries are empty. reason=no_duration")
         return []
     quantiles = np.linspace(0.0, 1.0, int(bucket_count) + 1, dtype=np.float64)[1:-1]
     edges = np.unique(np.quantile(values, quantiles)).astype(np.float32)
-    logger.info("provider duration-local ratio边界计算完成。actual_buckets=%s", int(edges.size + 1))
+    logger.info("Provider duration-local ratio boundaries computed. actual_buckets=%s", int(edges.size + 1))
     return [float(value) for value in edges.tolist()]
 
 
 def _duration_prior_from_train(processed_dir: Path, bucket_count: int, logger) -> tuple[list[float], list[float]]:
-    logger.info("开始计算provider duration prior。buckets=%s", int(bucket_count))
+    logger.info("Computing the provider duration prior. buckets=%s", int(bucket_count))
 
     if int(bucket_count) <= 1:
-        logger.info("provider duration prior关闭。")
+        logger.info("Provider duration prior disabled.")
         return [], []
 
     train_path = processed_dir / "standard_train.npz"
@@ -256,7 +256,7 @@ def _duration_prior_from_train(processed_dir: Path, bucket_count: int, logger) -
     duration = duration[valid]
     play_time = play_time[valid]
     if duration.size == 0:
-        logger.info("provider duration prior为空。reason=no_valid_rows")
+        logger.info("Provider duration prior is empty. reason=no_valid_rows")
         return [], []
 
     quantiles = np.linspace(0.0, 1.0, int(bucket_count) + 1, dtype=np.float64)[1:-1]
@@ -270,7 +270,7 @@ def _duration_prior_from_train(processed_dir: Path, bucket_count: int, logger) -
         value = float(np.median(play_time[mask])) if bool(mask.any()) else global_median
         values.append(value)
 
-    logger.info("provider duration prior计算完成。actual_buckets=%s", bucket_count_actual)
+    logger.info("Provider duration prior computed. actual_buckets=%s", bucket_count_actual)
     return [float(value) for value in edges.tolist()], values
 
 
@@ -367,22 +367,22 @@ def _session_nll_summary(arrays: dict[str, np.ndarray]) -> dict[str, np.ndarray]
 
 
 def _duration_quantile_edges(arrays: dict[str, np.ndarray], buckets: int) -> np.ndarray:
-    logger.info("开始计算duration分位边界。buckets=%s", int(buckets))
+    logger.info("Computing duration quantile boundaries. buckets=%s", int(buckets))
 
     duration = np.asarray(arrays.get("duration_sec", []), dtype=np.float32).reshape(-1)
     duration = duration[np.isfinite(duration)]
     if duration.size == 0 or int(buckets) <= 1:
-        logger.info("duration分位边界为空。rows=%s buckets=%s", int(duration.size), int(buckets))
+        logger.info("Duration quantile boundaries are empty. rows=%s buckets=%s", int(duration.size), int(buckets))
         return np.asarray([], dtype=np.float32)
 
     quantiles = np.linspace(0.0, 1.0, int(buckets) + 1, dtype=np.float64)[1:-1]
     edges = np.quantile(duration, quantiles).astype(np.float32)
-    logger.info("duration分位边界计算完成。edges=%s", edges.tolist())
+    logger.info("Duration quantile boundaries computed. edges=%s", edges.tolist())
     return edges
 
 
 def _save_eval_artifacts(run_dir: Path, split_name: str, result, logger) -> None:
-    logger.info("开始写出%s评估审计数组...", split_name)
+    logger.info("Writing %s evaluation audit arrays...", split_name)
 
     if {"session_key", "nll_sum", "count"}.issubset(result.arrays):
         session_summary = {
@@ -394,7 +394,7 @@ def _save_eval_artifacts(run_dir: Path, split_name: str, result, logger) -> None
         session_summary = _session_nll_summary(result.arrays)
     np.savez(run_dir / f"{split_name}_session_nll.npz", **session_summary)
 
-    logger.info("写出%s评估审计数组完成。", split_name)
+    logger.info("Wrote %s evaluation audit arrays.", split_name)
 
 
 def _evaluate_split(
@@ -411,7 +411,7 @@ def _evaluate_split(
     logger,
 ):
 
-    logger.info("开始%s评估。rows=%s", split_name, len(loader.dataset))
+    logger.info("Evaluating %s. rows=%s", split_name, len(loader.dataset))
 
     result = evaluate_model(
         eval_model,
@@ -428,7 +428,7 @@ def _evaluate_split(
         primary_metric,
         calibration,
     )
-    logger.info("%s评估完成。primary_nll=%.6f", split_name, result.metrics["primary_nll"])
+    logger.info("%s evaluation complete. primary_nll=%.6f", split_name, result.metrics["primary_nll"])
     return result
 
 
@@ -439,7 +439,7 @@ def _checkpoint_payload(
     epoch: int,
     metrics: dict[str, Any],
 ) -> dict[str, Any]:
-    logger.info("开始构造checkpoint载荷。epoch=%s", epoch)
+    logger.info("Building the checkpoint payload. epoch=%s", epoch)
 
     payload = {
         "model": _model_state_dict(model),
@@ -449,7 +449,7 @@ def _checkpoint_payload(
         "validation_metrics": metrics,
     }
 
-    logger.info("checkpoint载荷构造完成。epoch=%s", epoch)
+    logger.info("Checkpoint payload built. epoch=%s", epoch)
     return payload
 
 
@@ -513,7 +513,7 @@ def train_model(config: dict[str, Any], model_type: str, logger) -> dict[str, An
             ddp_ctx["enabled"],
             ddp_ctx["world_size"],
         )
-        logger.info("DSI评估主指标: %s", primary_metric)
+        logger.info("Primary DSI evaluation metric: %s", primary_metric)
     parameter_count = int(sum(param.numel() for param in _model_state_dict(model).values()))
     best_val = float("inf")
     best_path = run_dir / "best.pt"
@@ -535,7 +535,7 @@ def train_model(config: dict[str, Any], model_type: str, logger) -> dict[str, An
             output = model(batch)
 
             if step_idx == 0:
-                logger.info("开始DSI observation-set posterior训练epoch。epoch=%s", epoch)
+                logger.info("Starting DSI observation-set posterior training epoch. epoch=%s", epoch)
 
             if model_type == "time_only_posterior":
                 loss_parts = time_only_posterior_losses(
@@ -562,7 +562,7 @@ def train_model(config: dict[str, Any], model_type: str, logger) -> dict[str, An
                 )
 
             if step_idx == 0:
-                logger.info("开始检查事件边际坍缩。")
+                logger.info("Checking for event-marginal collapse.")
 
             final_event_mass = posterior_event_mass_from_output(
                 output,
@@ -572,13 +572,13 @@ def train_model(config: dict[str, Any], model_type: str, logger) -> dict[str, An
 
             final_event_prob = final_event_mass.detach().sum(dim=2).mean(dim=0)
             if step_idx == 0:
-                logger.info("事件边际坍缩检查完成。")
+                logger.info("Event-marginal collapse check complete.")
             if torch.any(final_event_prob < 1e-5):
                 collapse_steps += 1
             else:
                 collapse_steps = 0
             if step_idx == 0:
-                logger.info("DSI observation-set posterior训练epoch首步完成。epoch=%s", epoch)
+                logger.info("Completed the first step of the DSI observation-set posterior training epoch. epoch=%s", epoch)
 
             loss = loss_parts["total"]
             if not torch.isfinite(loss):
@@ -612,7 +612,7 @@ def train_model(config: dict[str, Any], model_type: str, logger) -> dict[str, An
         grad_norm_max = _ddp_mean(local_grad_norm_max, device, ddp_ctx)
         stop_now = False
         if ddp_ctx["is_main"]:
-            logger.info("开始训练期轻量validation。epoch=%s", epoch)
+            logger.info("Running lightweight training-time validation. epoch=%s", epoch)
 
             val_result = evaluate_model_light(
                 model.module if isinstance(model, DistributedDataParallel) else model,
@@ -625,7 +625,7 @@ def train_model(config: dict[str, Any], model_type: str, logger) -> dict[str, An
                 config["evaluation"]["ece_bins"],
                 primary_metric,
             )
-            logger.info("训练期轻量validation完成。epoch=%s", epoch)
+            logger.info("Lightweight training-time validation complete. epoch=%s", epoch)
             val_nll = val_result.metrics["primary_nll"]
             row = {
                 "epoch": epoch,
@@ -675,7 +675,7 @@ def train_model(config: dict[str, Any], model_type: str, logger) -> dict[str, An
         calibration_type = str(calibration_cfg.get("type", "event_marginal"))
         if calibration_type != "event_marginal":
             raise ValueError(f"DSI now supports event_marginal calibration only: {calibration_type}")
-        logger.info("开始validation-only event-marginal calibration流程。")
+        logger.info("Starting validation-only event-marginal calibration.")
         validation_raw_result = evaluate_model(
             eval_model,
             loaders["standard_val"],
@@ -699,7 +699,7 @@ def train_model(config: dict[str, Any], model_type: str, logger) -> dict[str, An
             int(calibration_cfg.get("max_steps", 200)),
             logger,
         )
-        logger.info("validation-only event-marginal calibration流程完成。")
+        logger.info("Validation-only event-marginal calibration complete.")
     test_raw_result = _evaluate_split(
         eval_model,
         loaders["standard_test"],

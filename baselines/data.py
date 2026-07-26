@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class DSIBaselineDataset(Dataset):
     def __init__(self, split_path: str | Path, max_rows: int | None = None, include_raw_features: bool = False) -> None:
-        logger.info("开始加载DSI baseline数据。split=%s max_rows=%s include_raw=%s", split_path, max_rows, include_raw_features)
+        logger.info("Loading DSI baseline data. split=%s max_rows=%s include_raw=%s", split_path, max_rows, include_raw_features)
 
         split = Path(split_path)
         arrays = np.load(split, allow_pickle=False)
@@ -72,10 +72,10 @@ class DSIBaselineDataset(Dataset):
         ).astype(np.float32, copy=False)
         self.duration_model = np.zeros_like(self.duration, dtype=np.float32)
         self.ctn_model = np.zeros_like(self._ctn_seconds, dtype=np.float32)
-        logger.info("DSI baseline数据加载完成。split=%s rows=%d ctn_dim=%d raw_sparse_dim=%d", split_path, len(self), self.ctn_model.shape[1], self.raw_sparse.shape[1])
+        logger.info("DSI baseline data loaded. split=%s rows=%d ctn_dim=%d raw_sparse_dim=%d", split_path, len(self), self.ctn_model.shape[1], self.raw_sparse.shape[1])
 
     def set_model_continuous_scale(self, label_scale: float) -> None:
-        logger.info("开始构造模型侧归一化连续特征。label_scale=%.6f", float(label_scale))
+        logger.info("Building model-side normalized continuous features. label_scale=%.6f", float(label_scale))
 
         scale = max(float(label_scale), 1e-6)
         self.duration_model = (self.duration / scale).astype(np.float32, copy=False)
@@ -101,7 +101,7 @@ class DSIBaselineDataset(Dataset):
         if appended_log_duration_idx < model_ctn.shape[1]:
             model_ctn[:, appended_log_duration_idx] = np.log1p(self.duration_model).astype(np.float32, copy=False)
         self.ctn_model = model_ctn
-        logger.info("模型侧归一化连续特征构造完成。ctn_dim=%d", int(self.ctn_model.shape[1]))
+        logger.info("Model-side normalized continuous features built. ctn_dim=%d", int(self.ctn_model.shape[1]))
 
     def __len__(self) -> int:
         return int(self.play_time.shape[0])
@@ -137,20 +137,20 @@ class DSIBaselineBatchLoader:
         batch_size: int,
         shuffle: bool,
     ) -> None:
-        logger.info("开始初始化batch级数据迭代器。rows=%d batch_size=%d shuffle=%s", len(dataset), int(batch_size), shuffle)
+        logger.info("Initializing the batch data iterator. rows=%d batch_size=%d shuffle=%s", len(dataset), int(batch_size), shuffle)
 
         self.dataset = dataset
         self.device = device
         self.batch_size = int(batch_size)
         self.shuffle = bool(shuffle)
-        logger.info("batch级数据迭代器初始化完成。rows=%d", len(dataset))
+        logger.info("Batch data iterator initialized. rows=%d", len(dataset))
 
     def __len__(self) -> int:
 
         return (len(self.dataset) + self.batch_size - 1) // self.batch_size
 
     def __iter__(self):
-        logger.info("开始迭代baseline batch。rows=%d shuffle=%s", len(self.dataset), self.shuffle)
+        logger.info("Iterating over baseline batches. rows=%d shuffle=%s", len(self.dataset), self.shuffle)
 
         row_count = len(self.dataset)
         if self.shuffle:
@@ -184,7 +184,7 @@ class DSIBaselineBatchLoader:
             label = torch.as_tensor(self.dataset.play_time[batch_index], dtype=torch.float32, device=self.device)
             yield features, label
 
-        logger.info("baseline batch迭代完成。rows=%d", row_count)
+        logger.info("Baseline batch iteration complete. rows=%d", row_count)
 
 
 class DSIBaselineDataLoaders:
@@ -202,7 +202,7 @@ class DSIBaselineDataLoaders:
         include_raw_features: bool = False,
     ) -> None:
         logger.info(
-            "开始构造baseline数据加载器。processed_dir=%s batch_size=%d split_prefix=%s include_raw=%s",
+            "Building the baseline data loader. processed_dir=%s batch_size=%d split_prefix=%s include_raw=%s",
             processed_dir,
             int(batch_size),
             split_prefix,
@@ -230,16 +230,16 @@ class DSIBaselineDataLoaders:
         train = DSIBaselineDataset(self.processed_dir / f"{self.split_prefix}_train.npz", max_train_rows, self.include_raw_features)
         val = DSIBaselineDataset(self.processed_dir / f"{self.split_prefix}_val.npz", max_eval_rows, self.include_raw_features)
         test = DSIBaselineDataset(self.processed_dir / f"{self.split_prefix}_test.npz", max_eval_rows, self.include_raw_features)
-        logger.info("开始绑定baseline模型侧连续特征归一化。")
+        logger.info("Configuring baseline model-side continuous-feature normalization.")
         self.model_continuous_scale = max(float(np.nanmax(train.play_time)), 1e-6)
         for dataset in (train, val, test):
             dataset.set_model_continuous_scale(self.model_continuous_scale)
-        logger.info("baseline模型侧连续特征归一化绑定完成。scale=%.6f", self.model_continuous_scale)
+        logger.info("Baseline model-side continuous-feature normalization configured. scale=%.6f", self.model_continuous_scale)
 
         self.duration_bucket_edges = np.zeros((0,), dtype=np.float32)
         self.duration_bucket_count = 1
         if include_duration_bucket:
-            logger.info("开始绑定duration_bucket输入。requested_buckets=%d", int(duration_bucket_count))
+            logger.info("Configuring duration_bucket input. requested_buckets=%d", int(duration_bucket_count))
             self.duration_bucket_edges = duration_quantile_edges(train.duration, int(duration_bucket_count))
             self.duration_bucket_count = int(self.duration_bucket_edges.size + 1)
             for dataset in (train, val, test):
@@ -248,7 +248,7 @@ class DSIBaselineDataLoaders:
                     dataset.duration.reshape(-1),
                     side="left",
                 ).astype(np.int64)
-            logger.info("duration_bucket输入绑定完成。actual_buckets=%d", self.duration_bucket_count)
+            logger.info("Duration_bucket input configured. actual_buckets=%d", self.duration_bucket_count)
 
         self.description = [
             ("user_id", int(self.manifest["num_users"]), "spr"),
@@ -285,7 +285,7 @@ class DSIBaselineDataLoaders:
                 shuffle=False,
             ),
         }
-        logger.info("baseline数据加载器构造完成。processed_dir=%s include_raw=%s", processed_dir, self.include_raw_features)
+        logger.info("Baseline data loader built. processed_dir=%s include_raw=%s", processed_dir, self.include_raw_features)
 
     def _collate(self, batch: list[tuple[dict[str, torch.Tensor], torch.Tensor]]) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
 

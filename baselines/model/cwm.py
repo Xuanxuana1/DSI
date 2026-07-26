@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class CWM(nn.Module):
     def __init__(self, description: list[tuple[str, Any, str]], embed_dim: int) -> None:
         super().__init__()
-        logger.info("开始初始化CWM baseline。embed_dim=%d", int(embed_dim))
+        logger.info("Initializing CWM baseline. embed_dim=%d", int(embed_dim))
 
         self.spec = feature_sizes(description)
         self.sparse_names = [name for name, (_, kind) in self.spec.items() if kind == "spr"]
@@ -45,13 +45,13 @@ class CWM(nn.Module):
         })
         self.bias = nn.Parameter(torch.zeros(1))
         logger.info(
-            "CWM baseline初始化完成。scalar_fields=%d vector_groups=%d",
+            "CWM baseline initialized. scalar_fields=%d vector_groups=%d",
             len(self.sparse_names),
             len(self.sparse_vec_names),
         )
 
     def forward(self, x_dict: dict[str, torch.Tensor]) -> torch.Tensor:
-        logger.debug("开始执行CWM前向。")
+        logger.debug("Running the CWM forward pass.")
 
         emb_parts: list[torch.Tensor] = []
         linear_parts: list[torch.Tensor] = []
@@ -71,7 +71,7 @@ class CWM(nn.Module):
 
         if not emb_parts:
             batch_size = int(x_dict["duration"].shape[0])
-            logger.debug("CWM前向完成。无离散字段。")
+            logger.debug("CWM forward pass complete. No categorical fields.")
             return self.bias.expand(batch_size)
         emb = torch.stack(emb_parts, dim=1)
         linear = torch.stack(linear_parts, dim=1).sum(dim=1).squeeze(1)
@@ -80,5 +80,5 @@ class CWM(nn.Module):
         fm = 0.5 * torch.sum(square_of_sum - sum_of_square, dim=1)
 
         score = linear + fm + self.bias
-        logger.debug("CWM前向完成。")
+        logger.debug("CWM forward pass complete.")
         return score.view(-1)

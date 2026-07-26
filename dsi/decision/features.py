@@ -56,7 +56,7 @@ class FeatureSource:
 
 def _parse_feature_source(value: str) -> FeatureSource:
     logger = setup_logging(None)
-    logger.info("开始解析posterior source。value=%s", value)
+    logger.info("Parsing the posterior source. value=%s", value)
 
     parts = str(value).split(":", 3)
     if len(parts) != 4:
@@ -68,13 +68,13 @@ def _parse_feature_source(value: str) -> FeatureSource:
         config_path=resolve_path(parts[2]).resolve(),
         checkpoint_root=resolve_path(parts[3]).resolve(),
     )
-    logger.info("posterior source解析完成。name=%s model=%s", source.name, source.model_type)
+    logger.info("Posterior source parsed. name=%s model=%s", source.name, source.model_type)
     return source
 
 
 def _load_content_arrays(processed_dir: Path) -> tuple[np.ndarray, np.ndarray] | None:
     logger = setup_logging(None)
-    logger.info("开始加载共享item content特征。processed_dir=%s", processed_dir)
+    logger.info("Loading shared item-content features. processed_dir=%s", processed_dir)
 
     mmap_dir = processed_dir / "item_content"
     if mmap_dir.is_dir():
@@ -82,16 +82,16 @@ def _load_content_arrays(processed_dir: Path) -> tuple[np.ndarray, np.ndarray] |
             np.load(mmap_dir / "content_category.npy", mmap_mode="r", allow_pickle=False),
             np.load(mmap_dir / "content_numeric.npy", mmap_mode="r", allow_pickle=False),
         )
-        logger.info("共享item content特征加载完成。source=mmap")
+        logger.info("Shared item-content features loaded. source=mmap")
         return arrays
 
     npz_path = processed_dir / "item_content.npz"
     if npz_path.exists():
         loaded = np.load(npz_path, allow_pickle=False)
-        logger.info("共享item content特征加载完成。source=npz")
+        logger.info("Shared item-content features loaded. source=npz")
         return loaded["content_category"], loaded["content_numeric"]
 
-    logger.info("共享item content特征不存在。")
+    logger.info("Shared item-content features not found.")
     return None
 
 
@@ -101,7 +101,7 @@ def _prepare_model(
     device: torch.device,
     logger,
 ) -> tuple[dict[str, Any], torch.nn.Module, dict[str, Any]]:
-    logger.info("开始加载冻结DSI provider。source=%s seed=%s", source.name, int(seed))
+    logger.info("Loading the frozen DSI provider. source=%s seed=%s", source.name, int(seed))
 
     config, _ = load_dsi_config(source.config_path)
     config["training"]["seed"] = int(seed)
@@ -116,7 +116,7 @@ def _prepare_model(
     _load_model_state_dict(model, state)
     model.eval()
 
-    logger.info("冻结DSI provider加载完成。checkpoint=%s", checkpoint_path)
+    logger.info("Frozen DSI provider loaded. checkpoint=%s", checkpoint_path)
     return config, model, manifest
 
 
@@ -362,7 +362,7 @@ def _model_features(
     summary_protocol: str,
     logger,
 ) -> np.ndarray:
-    logger.info("开始生成posterior summary feature。split=%s source=%s", split, source.name)
+    logger.info("Generating posterior summary features. split=%s source=%s", split, source.name)
 
     processed_dir = Path(config["data"]["processed_dir"]).expanduser().resolve()
     dataset = NPZExposureDataset(processed_dir / f"{split}.npz", content_arrays=content_arrays)
@@ -403,10 +403,10 @@ def _model_features(
             features = torch.cat([features, hidden_features], dim=1)
         parts.append(features.detach().cpu().numpy().astype(np.float32, copy=False))
         if (batch_idx + 1) % 100 == 0:
-            logger.info("posterior summary生成进度。split=%s batches=%s", split, batch_idx + 1)
+            logger.info("Posterior-summary generation progress. split=%s batches=%s", split, batch_idx + 1)
 
     output_features = np.concatenate(parts, axis=0)
-    logger.info("posterior summary feature生成完成。split=%s rows=%s dim=%s", split, output_features.shape[0], output_features.shape[1])
+    logger.info("Posterior summary features generated. split=%s rows=%s dim=%s", split, output_features.shape[0], output_features.shape[1])
     return output_features
 
 
@@ -439,7 +439,7 @@ def _id_features(
     content_arrays: tuple[np.ndarray, np.ndarray] | None,
 ) -> np.ndarray:
     logger = setup_logging(None)
-    logger.info("开始抽取decision稀疏ID特征。")
+    logger.info("Extracting decision sparse-ID features.")
 
     lookup = slice(None) if indices is None else indices
     item_idx = np.asarray(arrays["item_idx"][lookup], dtype=np.int64)
@@ -457,13 +457,13 @@ def _id_features(
             parts.append(content_category[:, idx])
 
     output = np.column_stack(parts).astype(np.int64, copy=False)
-    logger.info("decision稀疏ID特征抽取完成。dim=%s", int(output.shape[1]))
+    logger.info("Decision sparse-ID features extracted. dim=%s", int(output.shape[1]))
     return output
 
 
 def _decision_sparse_metadata(manifest: dict[str, Any]) -> tuple[list[str], list[int]]:
     logger = setup_logging(None)
-    logger.info("开始构造decision稀疏特征元信息。")
+    logger.info("Building decision sparse-feature metadata.")
 
     names = ["user_idx", "item_idx", "tab", "prev_event"]
     cardinalities = [
@@ -479,7 +479,7 @@ def _decision_sparse_metadata(manifest: dict[str, Any]) -> tuple[list[str], list
     names.extend([f"content_{value}" for value in category_names[: len(category_cardinalities)]])
     cardinalities.extend(category_cardinalities)
 
-    logger.info("decision稀疏特征元信息构造完成。fields=%s", int(len(names)))
+    logger.info("Decision sparse-feature metadata built. fields=%s", int(len(names)))
     return names, cardinalities
 
 
@@ -502,17 +502,17 @@ def _play_time(npz: np.lib.npyio.NpzFile, indices: np.ndarray | None) -> np.ndar
 
 
 def _sample_train_indices(train_len: int, train_rows: int, seed: int, logger) -> np.ndarray | None:
-    logger.info("开始采样decision训练行。train_len=%s train_rows=%s", int(train_len), int(train_rows))
+    logger.info("Sampling decision training rows. train_len=%s train_rows=%s", int(train_len), int(train_rows))
 
     rows = min(int(train_rows), int(train_len))
     if rows >= int(train_len):
-        logger.info("decision训练使用全量行。rows=%s", int(train_len))
+        logger.info("Decision training uses all rows. rows=%s", int(train_len))
         return None
 
     rng = np.random.default_rng(int(seed))
     indices = np.sort(rng.choice(int(train_len), size=rows, replace=False).astype(np.int64))
 
-    logger.info("decision训练行采样完成。rows=%s", int(indices.shape[0]))
+    logger.info("Decision training rows sampled. rows=%s", int(indices.shape[0]))
     return indices
 
 
@@ -587,7 +587,7 @@ def _rebuild_feature_sets(
         return feature_sets
 
     if logger is not None:
-        logger.info("开始构造等维特征消融。")
+        logger.info("Building the width-matched feature ablation.")
 
     feature_sets["posterior"] = posterior
 
@@ -610,16 +610,16 @@ def _rebuild_feature_sets(
     feature_sets["posterior_equivalent"] = posterior_equivalent
 
     if logger is not None:
-        logger.info("等维特征消融构造完成。dim=%s", int(feature_sets["fused"]["train"].shape[1]))
+        logger.info("Width-matched feature ablation built. dim=%s", int(feature_sets["fused"]["train"].shape[1]))
     return feature_sets
 
 
 def _load_feature_cache(cache_path: Path, logger) -> tuple[dict[str, Any], dict[str, dict[str, np.ndarray]], dict[str, Any]] | None:
 
     if not cache_path.exists():
-        logger.info("decision feature cache未命中。path=%s", cache_path)
+        logger.info("Decision feature cache miss. path=%s", cache_path)
         return None
-    logger.info("开始读取decision feature cache。path=%s", cache_path)
+    logger.info("Reading the decision feature cache. path=%s", cache_path)
 
     with np.load(cache_path, allow_pickle=False) as cache:
         metadata = json.loads(str(cache["metadata_json"].item()))
@@ -642,7 +642,7 @@ def _load_feature_cache(cache_path: Path, logger) -> tuple[dict[str, Any], dict[
     feature_sets = _rebuild_feature_sets(raw, posterior, logger)
     metadata["feature_cache"] = {"enabled": True, "hit": True, "path": str(cache_path)}
     payload = {"labels": labels, "eval": eval_arrays, "id_features": id_features}
-    logger.info("decision feature cache读取完成。path=%s", cache_path)
+    logger.info("Decision feature cache loaded. path=%s", cache_path)
     return metadata, feature_sets, payload
 
 
@@ -653,7 +653,7 @@ def _save_feature_cache(
     payload: dict[str, Any],
     logger,
 ) -> None:
-    logger.info("开始写入decision feature cache。path=%s", cache_path)
+    logger.info("Writing the decision feature cache. path=%s", cache_path)
 
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     serialized_metadata = portableize_serialized_paths(metadata)
@@ -681,11 +681,11 @@ def _save_feature_cache(
         np.savez(handle, **arrays)
     tmp_path.replace(cache_path)
 
-    logger.info("decision feature cache写入完成。path=%s", cache_path)
+    logger.info("Decision feature cache written. path=%s", cache_path)
 
 
 def _build_feature_matrices(args: argparse.Namespace, device: torch.device, logger) -> tuple[dict[str, Any], dict[str, dict[str, np.ndarray]], dict[str, Any]]:
-    logger.info("开始构造decision feature矩阵。seed=%s", int(args.seed))
+    logger.info("Building decision feature matrices. seed=%s", int(args.seed))
 
     base_config, _ = load_dsi_config(args.base_config)
     base_config["training"]["seed"] = int(args.seed)
@@ -774,14 +774,14 @@ def _build_feature_matrices(args: argparse.Namespace, device: torch.device, logg
         "decision_sparse_cardinalities": sparse_cardinalities,
     }
 
-    logger.info("decision feature矩阵构造完成。feature_sets=%s sources=%s", sorted(feature_sets), sources)
+    logger.info("Decision feature matrices built. feature_sets=%s sources=%s", sorted(feature_sets), sources)
     return metadata, feature_sets, {"labels": labels, "eval": eval_arrays, "id_features": id_features}
 
 
 def _cached_feature_matrices(args: argparse.Namespace, device: torch.device, logger) -> tuple[dict[str, Any], dict[str, dict[str, np.ndarray]], dict[str, Any]]:
 
     if bool(getattr(args, "no_feature_cache", False)):
-        logger.info("decision feature cache已关闭。")
+        logger.info("Decision feature cache disabled.")
         metadata, feature_sets, payload = _build_feature_matrices(args, device, logger)
         metadata["feature_cache"] = {"enabled": False, "hit": False, "path": None}
         return metadata, feature_sets, payload
@@ -793,7 +793,7 @@ def _cached_feature_matrices(args: argparse.Namespace, device: torch.device, log
             return cached
 
     if bool(getattr(args, "refresh_feature_cache", False)):
-        logger.info("强制刷新decision feature cache。path=%s", cache_path)
+        logger.info("Forcing a decision feature-cache refresh. path=%s", cache_path)
     metadata, feature_sets, payload = _build_feature_matrices(args, device, logger)
     metadata["feature_cache"] = {"enabled": True, "hit": False, "path": str(cache_path)}
     _save_feature_cache(cache_path, metadata, feature_sets, payload, logger)

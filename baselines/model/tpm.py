@@ -21,12 +21,12 @@ class TPM(nn.Module):
         dropout: float,
     ) -> None:
         super().__init__()
-        logger.info("开始初始化TPM baseline。class_num=%d", int(class_num))
+        logger.info("Initializing TPM baseline. class_num=%d", int(class_num))
 
         self.encoder = FieldFeatureEncoder(description, embed_dim, continuous_mode="dense")
 
         self.mlp = MultiLayerPerceptronTPM(self.encoder.output_dim, mlp_dims, dropout, class_num)
-        logger.info("TPM baseline初始化完成。input_dim=%d", self.encoder.output_dim)
+        logger.info("TPM baseline initialized. input_dim=%d", self.encoder.output_dim)
 
     def forward_with_hidden(self, x_dict: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
 

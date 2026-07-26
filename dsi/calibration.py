@@ -37,7 +37,7 @@ def fit_event_marginal_calibration_from_arrays(
     max_steps: int,
     logger,
 ) -> dict[str, Any]:
-    logger.info("开始拟合validation-only event-marginal calibration...")
+    logger.info("Fitting validation-only event-marginal calibration...")
 
     if "event_mass" in arrays:
         event_prob = np.asarray(arrays["event_mass"].sum(axis=2), dtype=np.float64)
@@ -113,7 +113,7 @@ def fit_event_marginal_calibration_from_arrays(
         after_mass = apply_event_marginal_calibration(event_mass_torch, calibration)
         after_cr_nll = float(competing_risk_nll_from_event_mass(after_mass, event_torch, time_bin).detach())
     if (not np.isfinite(best_ece)) or best_ece > before_ece:
-        logger.info("event-marginal calibration未改善validation macro ECE，回退到identity temperature。")
+        logger.info("Event-marginal calibration did not improve validation macro ECE; falling back to the identity temperature.")
         temperature = np.ones(num_events, dtype=np.float32)
         calibration = {
             "type": "event_marginal",
@@ -133,7 +133,7 @@ def fit_event_marginal_calibration_from_arrays(
     calibration["validation_cr_nll_after"] = after_cr_nll
     calibration["temperature_boundary_rate"] = boundary_rate
     logger.info(
-        "validation-only event-marginal calibration完成。macro ECE %.6f -> %.6f, CR-NLL before %.6f, after %s, boundary_rate %.4f",
+        "Validation-only event-marginal calibration complete. macro ECE %.6f -> %.6f, CR-NLL before %.6f, after %s, boundary_rate %.4f",
         before_ece,
         best_ece,
         before_cr_nll,

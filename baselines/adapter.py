@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 
 def _build_dynamic_vocab(values: np.ndarray, q_start: float, q_end: float, q_decay_rate: float, epsilon: float) -> list[int]:
-    logger.info("开始构造GR动态词表。rows=%d", int(values.size))
+    logger.info("Building the GR dynamic vocabulary. rows=%d", int(values.size))
 
     if values.size == 0:
-        logger.info("GR动态词表构造完成。vocab_size=1")
+        logger.info("GR dynamic vocabulary built. vocab_size=1")
         return [1]
     sorted_values = np.sort(values.astype(np.int64, copy=False))[::-1]
     updated = sorted_values.copy()
@@ -47,7 +47,7 @@ def _build_dynamic_vocab(values: np.ndarray, q_start: float, q_end: float, q_dec
 
     if not output:
         output = [1]
-    logger.info("GR动态词表构造完成。vocab_size=%d", int(len(output)))
+    logger.info("GR dynamic vocabulary built. vocab_size=%d", int(len(output)))
     return output
 
 
@@ -64,7 +64,7 @@ def build_gr_numeric_vocab(
     epsilon: float,
     max_numeric_tokens: int | None = None,
 ) -> list[int]:
-    logger.info("开始构造GR原仓库式动态数值词表。")
+    logger.info("Building the original-repository-style GR dynamic numeric vocabulary.")
 
     ratio_int = (_duration_ratio(labels, durations) * 1000.0).astype(np.int64)
 
@@ -72,7 +72,7 @@ def build_gr_numeric_vocab(
     if max_numeric_tokens is not None and int(max_numeric_tokens) > 0:
         numeric_vocab = numeric_vocab[: int(max_numeric_tokens)]
 
-    logger.info("GR原仓库式动态数值词表构造完成。numeric_tokens=%d", int(len(numeric_vocab)))
+    logger.info("Original-repository-style GR dynamic numeric vocabulary built. numeric_tokens=%d", int(len(numeric_vocab)))
     return numeric_vocab
 
 
@@ -190,17 +190,17 @@ class VRAdapter(BaseAdapter):
 
 class WLRAdapter(BaseAdapter):
     def __init__(self, model: torch.nn.Module) -> None:
-        logger.info("开始初始化WLR adapter。")
+        logger.info("Initializing WLR adapter.")
         super().__init__(model)
 
         self.label_scale = 1.0
-        logger.info("WLR adapter初始化完成。")
+        logger.info("WLR adapter initialized.")
 
     def set_label_scale(self, label_scale: float) -> None:
-        logger.info("开始绑定WLR标签缩放。label_scale=%.6f", float(label_scale))
+        logger.info("Setting WLR label scaling. label_scale=%.6f", float(label_scale))
 
         self.label_scale = max(float(label_scale), 1e-6)
-        logger.info("WLR标签缩放绑定完成。")
+        logger.info("WLR label scaling set.")
 
     def stage1_loss(self, features: dict[str, torch.Tensor], label: torch.Tensor) -> torch.Tensor:
 
@@ -211,13 +211,13 @@ class WLRAdapter(BaseAdapter):
         return -(target * torch.log(pred) + torch.log(1.0 - pred)).mean()
 
     def _proxy_from_probability(self, pred: torch.Tensor, features: dict[str, torch.Tensor]) -> torch.Tensor:
-        logger.debug("开始还原WLR proxy。")
+        logger.debug("Restoring the WLR proxy.")
 
         odds = pred / (1.0 - pred)
 
         scale = pred.new_tensor(self.label_scale).clamp(min=1e-6)
         proxy = odds.clamp(min=0.001) * scale
-        logger.debug("WLR proxy还原完成。")
+        logger.debug("WLR proxy restored.")
         return proxy
 
     def get_base_pred(self, features: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
@@ -239,11 +239,11 @@ class CWMAdapter(BaseAdapter):
         self.sigma = 2.0
 
     def set_params(self, c_inv: float, sigma: float) -> None:
-        logger.info("开始绑定CWM参数。c_inv=%.6f sigma=%.6f", float(c_inv), float(sigma))
+        logger.info("Setting CWM parameters. c_inv=%.6f sigma=%.6f", float(c_inv), float(sigma))
 
         self.c_inv = float(c_inv)
         self.sigma = max(float(sigma), 1e-6)
-        logger.info("CWM参数绑定完成。")
+        logger.info("CWM parameters set.")
 
     @staticmethod
     def _inv_sigmoid(value: torch.Tensor) -> torch.Tensor:
@@ -252,7 +252,7 @@ class CWMAdapter(BaseAdapter):
         return torch.log(clipped / (1.0 - clipped))
 
     def stage1_loss(self, features: dict[str, torch.Tensor], label: torch.Tensor) -> torch.Tensor:
-        logger.debug("开始计算CWM loss。")
+        logger.debug("Computing CWM loss.")
 
         duration = features["duration"].view(-1).float().clamp(min=0.0)
         wt = torch.minimum(label.view(-1).float().clamp(min=0.0), duration)
@@ -272,11 +272,11 @@ class CWMAdapter(BaseAdapter):
             target_over = self._inv_sigmoid(rel_true_over)
             loss = loss - F.logsigmoid((rel_score[over_mask] - target_over) / sigma).mean()
 
-        logger.debug("CWM loss计算完成。loss=%.6f", float(loss.detach().cpu().item()))
+        logger.debug("CWM loss computed. loss=%.6f", float(loss.detach().cpu().item()))
         return loss
 
     def get_base_pred(self, features: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-        logger.debug("开始读取CWM预测。")
+        logger.debug("Reading CWM predictions.")
 
         raw_score = self.model(features).view(-1, 1)
         pred_rel = -F.logsigmoid(raw_score)
@@ -288,7 +288,7 @@ class CWMAdapter(BaseAdapter):
         proxy = torch.minimum(proxy, duration)
 
         p = torch.sigmoid(torch.log(proxy.clamp(min=1e-7)) - torch.log1p(duration.clamp(min=1e-7)))
-        logger.debug("CWM预测读取完成。")
+        logger.debug("CWM predictions loaded.")
         return p.clamp(1e-6, 1.0 - 1e-6), proxy
 
 
@@ -298,13 +298,13 @@ class EGMNAdapter(BaseAdapter):
         self.label_scale = 1.0
 
     def set_label_scale(self, label_scale: float) -> None:
-        logger.info("开始绑定EGMN标签缩放。label_scale=%.6f", float(label_scale))
+        logger.info("Setting EGMN label scaling. label_scale=%.6f", float(label_scale))
 
         self.label_scale = max(float(label_scale), 1e-6)
-        logger.info("EGMN标签缩放绑定完成。")
+        logger.info("EGMN label scaling set.")
 
     def stage1_loss(self, features: dict[str, torch.Tensor], label: torch.Tensor) -> torch.Tensor:
-        logger.debug("开始计算EGMN adapter loss。")
+        logger.debug("Computing EGMN adapter loss.")
 
         scale = label.new_tensor(self.label_scale).clamp(min=1e-6)
         target = label.float() / scale
@@ -313,22 +313,22 @@ class EGMNAdapter(BaseAdapter):
 
         nll, reg, entropy = self.model.loss(target, pi, lambda_, mu, sigma)
         loss = nll - 0.1 * entropy + 1.0 * reg
-        logger.debug("EGMN adapter loss计算完成。loss=%.6f", float(loss.detach().cpu().item()))
+        logger.debug("EGMN adapter loss computed. loss=%.6f", float(loss.detach().cpu().item()))
         return loss
 
     def get_base_pred(self, features: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-        logger.debug("开始读取EGMN预测。")
+        logger.debug("Reading EGMN predictions.")
 
         normalized_proxy = self.model.predict(features).view(-1, 1).clamp(min=1e-6)
         scale = normalized_proxy.new_tensor(self.label_scale).clamp(min=1e-6)
         proxy = (normalized_proxy * scale).clamp(min=1e-6)
 
         p = torch.sigmoid(torch.log(proxy.clamp(min=1e-7)) - torch.log1p(features["duration"].view(-1, 1)))
-        logger.debug("EGMN预测读取完成。")
+        logger.debug("EGMN predictions loaded.")
         return p.clamp(1e-6, 1.0 - 1e-6), proxy.clamp(min=0.001)
 
     def get_base_pred_and_hidden(self, features: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
-        logger.debug("开始读取EGMN预测和hidden。")
+        logger.debug("Reading EGMN predictions and hidden states.")
 
         pi, lambda_, mu, _, hidden = self.model.forward_with_hidden(features)
         pi_soft = torch.softmax(pi, dim=1)
@@ -338,7 +338,7 @@ class EGMNAdapter(BaseAdapter):
         scale = normalized_proxy.new_tensor(self.label_scale).clamp(min=1e-6)
         proxy = (normalized_proxy * scale).clamp(min=1e-6)
         p = torch.sigmoid(torch.log(proxy.clamp(min=1e-7)) - torch.log1p(features["duration"].view(-1, 1)))
-        logger.debug("EGMN预测和hidden读取完成。")
+        logger.debug("EGMN predictions and hidden states loaded.")
         return p.clamp(1e-6, 1.0 - 1e-6), proxy.clamp(min=0.001), hidden.detach()
 
 
@@ -437,7 +437,7 @@ class CREADAdapter(BaseAdapter):
         lambda_ord: float = 0.00002,
     ) -> None:
         logger.info(
-            "开始绑定CREAD阈值。heads=%d label_space=normalized lambda_ce=%.6f lambda_restore=%.6f lambda_ord=%.6f",
+            "Setting CREAD thresholds. heads=%d label_space=normalized lambda_ce=%.6f lambda_restore=%.6f lambda_ord=%.6f",
             int(split_nodes.numel()),
             float(lambda_ce),
             float(lambda_restore),
@@ -449,10 +449,10 @@ class CREADAdapter(BaseAdapter):
         self.lambda_ce = float(lambda_ce)
         self.lambda_restore = float(lambda_restore)
         self.lambda_ord = float(lambda_ord)
-        logger.info("CREAD阈值绑定完成。")
+        logger.info("CREAD thresholds set.")
 
     def stage1_loss(self, features: dict[str, torch.Tensor], label: torch.Tensor) -> torch.Tensor:
-        logger.debug("开始计算CREAD loss。")
+        logger.debug("Computing CREAD loss.")
         if self.split_nodes is None:
             raise RuntimeError("CREAD split nodes are not initialized")
 
@@ -466,11 +466,11 @@ class CREADAdapter(BaseAdapter):
         restore_loss = F.huber_loss(restore, target)
         ord_loss = get_ord_criterion(pred)
         loss = self.lambda_ce * ce_loss + self.lambda_restore * restore_loss + self.lambda_ord * ord_loss
-        logger.debug("CREAD loss计算完成。loss=%.6f", float(loss.detach().cpu().item()))
+        logger.debug("CREAD loss computed. loss=%.6f", float(loss.detach().cpu().item()))
         return loss
 
     def get_base_pred(self, features: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-        logger.debug("开始读取CREAD预测。")
+        logger.debug("Reading CREAD predictions.")
         if self.split_nodes is None:
             raise RuntimeError("CREAD split nodes are not initialized")
 
@@ -481,7 +481,7 @@ class CREADAdapter(BaseAdapter):
         proxy = (proxy * scale).clamp(min=1e-6)
 
         p = self.probability_from_proxy(proxy, features["duration"])
-        logger.debug("CREAD预测读取完成。")
+        logger.debug("CREAD predictions loaded.")
         return p.clamp(1e-6, 1.0 - 1e-6), proxy.clamp(min=0.001)
 
     def get_base_pred_and_hidden(self, features: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
@@ -523,7 +523,7 @@ class GRAdapter(BaseAdapter):
         teacher_force_ratio: float,
         numeric_vocab: list[int] | None = None,
     ) -> None:
-        logger.info("开始绑定GR引用表。")
+        logger.info("Setting the GR reference table.")
 
         output_dim = int(getattr(self.model.decoder, "output_dim"))
         if numeric_vocab is None:
@@ -548,7 +548,7 @@ class GRAdapter(BaseAdapter):
         self.cls_weight = float(cls_weight)
         self.huber_weight = float(huber_weight)
         self.teacher_force_ratio = float(teacher_force_ratio)
-        logger.info("GR引用表绑定完成。vocab_size=%d", int(len(values)))
+        logger.info("GR reference table set. vocab_size=%d", int(len(values)))
 
     def _duration_bucket(self, features: dict[str, torch.Tensor]) -> torch.Tensor:
         if self.duration_edges is None:
@@ -556,7 +556,7 @@ class GRAdapter(BaseAdapter):
         return duration_bucket(features["duration"], self.duration_edges)
 
     def _encode_tokens(self, label: torch.Tensor, duration: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        logger.debug("开始编码GR目标token。")
+        logger.debug("Encoding GR target tokens.")
 
         ratio = (label.detach().float() / duration.detach().float().clamp(min=1e-6)).clamp(0.0, 10.0)
         ratio_int = (ratio * 1000.0).long().cpu().numpy().reshape(-1)
@@ -578,7 +578,7 @@ class GRAdapter(BaseAdapter):
         device = label.device
         tokens = torch.as_tensor(rows, dtype=torch.long, device=device)
         mask = (tokens != 0).long()
-        logger.debug("GR目标token编码完成。")
+        logger.debug("GR target tokens encoded.")
         return tokens, mask
 
     def _ratio_from_logits(self, logits: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
@@ -612,7 +612,7 @@ class GRAdapter(BaseAdapter):
         return self._ratio_from_logits(logits, mask)
 
     def stage1_loss(self, features: dict[str, torch.Tensor], label: torch.Tensor) -> torch.Tensor:
-        logger.debug("开始计算GR loss。")
+        logger.debug("Computing GR loss.")
         bucket = self._duration_bucket(features)
         tokens, mask = self._encode_tokens(label, features["duration"])
         logits = self.model(features, bucket, tokens[:, :-1], mask[:, :-1], self.teacher_force_ratio)
@@ -622,17 +622,17 @@ class GRAdapter(BaseAdapter):
         target_ratio = (label.float() / features["duration"].float().clamp(min=1e-6)).clamp(0.0, 10.0)
         loss_huber = F.huber_loss(pred_ratio, target_ratio, reduction="sum")
         loss = self.cls_weight * loss_ce + self.huber_weight * loss_huber
-        logger.debug("GR loss计算完成。loss=%.6f", float(loss.detach().cpu().item()))
+        logger.debug("GR loss computed. loss=%.6f", float(loss.detach().cpu().item()))
         return loss
 
     def get_base_pred(self, features: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-        logger.debug("开始读取GR预测。")
+        logger.debug("Reading GR predictions.")
         bucket = self._duration_bucket(features)
         logits = self.model.autoregressive_logits(features, bucket, self.max_len)
         ratio = self._ratio_from_autoregressive_logits(logits).view(-1, 1).clamp(0.0, 10.0)
         proxy = ratio * features["duration"].view(-1, 1).clamp(min=1e-6)
         p = torch.sigmoid(torch.log(proxy.clamp(min=1e-7)) - torch.log1p(features["duration"].view(-1, 1)))
-        logger.debug("GR预测读取完成。")
+        logger.debug("GR predictions loaded.")
         return p.clamp(1e-6, 1.0 - 1e-6), proxy.clamp(min=0.001)
 
 
@@ -644,11 +644,11 @@ class DIFLAdapter(BaseAdapter):
         self.micro_bs = 128
 
     def set_references(self, labels: np.ndarray, durations: np.ndarray, duration_edges: torch.Tensor, quantiles: torch.Tensor, micro_bs: int) -> None:
-        logger.info("开始绑定DIFL引用表。")
+        logger.info("Setting the DIFL reference table.")
         self.duration_edges = duration_edges
         self.quantiles = quantiles
         self.micro_bs = int(micro_bs)
-        logger.info("DIFL引用表绑定完成。buckets=%d quantiles=%d", int(quantiles.shape[0]), int(quantiles.shape[1]))
+        logger.info("DIFL reference table set. buckets=%d quantiles=%d", int(quantiles.shape[0]), int(quantiles.shape[1]))
 
     def _duration_bucket(self, features: dict[str, torch.Tensor]) -> torch.Tensor:
         if self.duration_edges is None:
@@ -695,7 +695,7 @@ class DIFLAdapter(BaseAdapter):
         return output.clamp(0.0, 10.0)
 
     def stage1_loss(self, features: dict[str, torch.Tensor], label: torch.Tensor) -> torch.Tensor:
-        logger.debug("开始计算DIFL loss。")
+        logger.debug("Computing DIFL loss.")
         bucket = self._duration_bucket(features)
         ratio = (label.float() / features["duration"].float().clamp(min=1e-6)).clamp(0.0, 10.0)
         target = self._ratio_to_quantile(ratio, bucket)
@@ -712,17 +712,17 @@ class DIFLAdapter(BaseAdapter):
             int(self.quantiles.shape[0]) if self.quantiles is not None else 1,
         )
         loss = loss_huber + loss_hsic
-        logger.debug("DIFL loss计算完成。loss=%.6f", float(loss.detach().cpu().item()))
+        logger.debug("DIFL loss computed. loss=%.6f", float(loss.detach().cpu().item()))
         return loss
 
     def get_base_pred(self, features: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
-        logger.debug("开始读取DIFL预测。")
+        logger.debug("Reading DIFL predictions.")
         bucket = self._duration_bucket(features)
         _, pred = self.model(features, bucket)
         ratio = self._quantile_to_ratio(pred.view(-1), bucket).view(-1, 1)
         proxy = ratio * features["duration"].view(-1, 1).clamp(min=1e-6)
         p = torch.sigmoid(torch.log(proxy.clamp(min=1e-7)) - torch.log1p(features["duration"].view(-1, 1)))
-        logger.debug("DIFL预测读取完成。")
+        logger.debug("DIFL predictions loaded.")
         return p.clamp(1e-6, 1.0 - 1e-6), proxy.clamp(min=0.001)
 
     def get_base_pred_and_hidden(self, features: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
@@ -752,7 +752,7 @@ def build_adapter(name: str, model: torch.nn.Module) -> BaseAdapter:
     if name not in _REGISTRY:
         raise ValueError(f"Unsupported baseline: {name}")
 
-    logger.info("构造baseline adapter。name=%s", name)
+    logger.info("Building baseline adapter. name=%s", name)
     return _REGISTRY[name](model)
 
 

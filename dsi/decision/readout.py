@@ -18,13 +18,13 @@ class OrdinalDecisionDataset(Dataset):
     def __init__(self, features: np.ndarray, target_time: np.ndarray, rank_label: np.ndarray) -> None:
         super().__init__()
         logger = setup_logging(None)
-        logger.info("开始初始化OrdinalDecisionDataset。rows=%s", int(features.shape[0]))
+        logger.info("Initializing OrdinalDecisionDataset. rows=%s", int(features.shape[0]))
 
         self.features = torch.as_tensor(features, dtype=torch.float32)
         self.target_time = torch.as_tensor(target_time, dtype=torch.float32)
         self.rank_label = torch.as_tensor(rank_label, dtype=torch.float32)
 
-        logger.info("OrdinalDecisionDataset初始化完成。")
+        logger.info("OrdinalDecisionDataset initialized.")
 
     def __len__(self) -> int:
         return int(self.features.shape[0])
@@ -68,7 +68,7 @@ class MLPBackbone(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int, hidden_layers: int, dropout: float) -> None:
         super().__init__()
         logger = setup_logging(None)
-        logger.info("开始初始化MLPBackbone。input_dim=%s hidden=%s layers=%s", int(input_dim), int(hidden_dim), int(hidden_layers))
+        logger.info("Initializing MLPBackbone. input_dim=%s hidden=%s layers=%s", int(input_dim), int(hidden_dim), int(hidden_layers))
 
         layers: list[nn.Module] = []
         current = int(input_dim)
@@ -85,7 +85,7 @@ class MLPBackbone(nn.Module):
         self.net = nn.Sequential(*layers)
         self.output_dim = int(hidden_dim)
 
-        logger.info("MLPBackbone初始化完成。output_dim=%s", self.output_dim)
+        logger.info("MLPBackbone initialized. output_dim=%s", self.output_dim)
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         return self.net(features)
@@ -95,13 +95,13 @@ class CrossNetwork(nn.Module):
     def __init__(self, input_dim: int, layers: int, dropout: float) -> None:
         super().__init__()
         logger = setup_logging(None)
-        logger.info("开始初始化CrossNetwork。input_dim=%s layers=%s", int(input_dim), int(layers))
+        logger.info("Initializing CrossNetwork. input_dim=%s layers=%s", int(input_dim), int(layers))
 
         self.layers = nn.ModuleList([nn.Linear(int(input_dim), int(input_dim)) for _ in range(max(int(layers), 1))])
         self.dropout = nn.Dropout(float(dropout))
         self.norm = nn.LayerNorm(int(input_dim))
 
-        logger.info("CrossNetwork初始化完成。")
+        logger.info("CrossNetwork initialized.")
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         x0 = features
@@ -115,13 +115,13 @@ class DCNBackbone(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int, hidden_layers: int, dropout: float, cross_layers: int) -> None:
         super().__init__()
         logger = setup_logging(None)
-        logger.info("开始初始化DCNBackbone。input_dim=%s hidden=%s", int(input_dim), int(hidden_dim))
+        logger.info("Initializing DCNBackbone. input_dim=%s hidden=%s", int(input_dim), int(hidden_dim))
 
         self.cross = CrossNetwork(int(input_dim), int(cross_layers), float(dropout))
         self.deep = MLPBackbone(int(input_dim), int(hidden_dim), int(hidden_layers), float(dropout))
         self.output_dim = int(input_dim) + int(hidden_dim)
 
-        logger.info("DCNBackbone初始化完成。output_dim=%s", self.output_dim)
+        logger.info("DCNBackbone initialized. output_dim=%s", self.output_dim)
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         return torch.cat([self.cross(features), self.deep(features)], dim=-1)
@@ -137,7 +137,7 @@ class IDAwareBackbone(nn.Module):
     ) -> None:
         super().__init__()
         logger = setup_logging(None)
-        logger.info("开始初始化IDAwareBackbone。fields=%s embed_dim=%s", len(cardinalities), int(embedding_dim))
+        logger.info("Initializing IDAwareBackbone. fields=%s embed_dim=%s", len(cardinalities), int(embedding_dim))
 
         self.base_backbone = base_backbone
         self.embeddings = nn.ModuleList(
@@ -147,7 +147,7 @@ class IDAwareBackbone(nn.Module):
         self.dropout = nn.Dropout(float(dropout))
         self.output_dim = int(base_backbone.output_dim) + len(self.embeddings) * int(embedding_dim)
 
-        logger.info("IDAwareBackbone初始化完成。output_dim=%s", self.output_dim)
+        logger.info("IDAwareBackbone initialized. output_dim=%s", self.output_dim)
 
     def forward(self, features: torch.Tensor, ids: torch.Tensor | None = None) -> torch.Tensor:
         hidden = self.base_backbone(features)
@@ -174,7 +174,7 @@ class IDInputBackbone(nn.Module):
     ) -> None:
         super().__init__()
         logger = setup_logging(None)
-        logger.info("开始初始化IDInputBackbone。scorer=%s fields=%s embed_dim=%s", scorer_name, len(cardinalities), int(embedding_dim))
+        logger.info("Initializing IDInputBackbone. scorer=%s fields=%s embed_dim=%s", scorer_name, len(cardinalities), int(embedding_dim))
 
         self.embeddings = nn.ModuleList(
             nn.Embedding(max(int(cardinality), 1), int(embedding_dim))
@@ -191,7 +191,7 @@ class IDInputBackbone(nn.Module):
             raise ValueError(f"Unsupported scorer={scorer_name}")
         self.output_dim = int(self.base_backbone.output_dim)
 
-        logger.info("IDInputBackbone初始化完成。input_dim=%s output_dim=%s", expanded_dim, self.output_dim)
+        logger.info("IDInputBackbone initialized. input_dim=%s output_dim=%s", expanded_dim, self.output_dim)
 
     def forward(self, features: torch.Tensor, ids: torch.Tensor | None = None) -> torch.Tensor:
         if ids is None or ids.shape[1] == 0 or not self.embeddings:
@@ -217,7 +217,7 @@ class OrdinalDecisionModel(nn.Module):
     ) -> None:
         super().__init__()
         logger = setup_logging(None)
-        logger.info("开始初始化OrdinalDecisionModel。bins=%s mode=integral", len(split_nodes))
+        logger.info("Initializing OrdinalDecisionModel. bins=%s mode=integral", len(split_nodes))
 
         self.backbone = backbone
         split_tensor = torch.as_tensor(split_nodes, dtype=torch.float32).view(-1)
@@ -226,7 +226,7 @@ class OrdinalDecisionModel(nn.Module):
         self.ordinal_head = nn.Linear(int(backbone.output_dim), int(split_tensor.numel()))
         self.rank_head = nn.Linear(int(backbone.output_dim), 1)
 
-        logger.info("OrdinalDecisionModel初始化完成。")
+        logger.info("OrdinalDecisionModel initialized.")
 
     def restored_time(self, logits: torch.Tensor) -> torch.Tensor:
         probs = torch.sigmoid(logits)
@@ -257,7 +257,7 @@ def _standardize(train: np.ndarray, *others: np.ndarray) -> tuple[np.ndarray, ..
 
 def _build_backbone(args: argparse.Namespace, scorer_name: str, input_dim: int) -> nn.Module:
     logger = setup_logging(None)
-    logger.info("开始构造decision backbone。scorer=%s input_dim=%s", scorer_name, int(input_dim))
+    logger.info("Building the decision backbone. scorer=%s input_dim=%s", scorer_name, int(input_dim))
 
     cardinalities = [int(value) for value in getattr(args, "decision_sparse_cardinalities", [])]
     id_mode = str(getattr(args, "decision_id_mode", "append"))
@@ -272,7 +272,7 @@ def _build_backbone(args: argparse.Namespace, scorer_name: str, input_dim: int) 
             float(args.scorer_dropout),
             int(args.scorer_cross_layers),
         )
-        logger.info("decision backbone构造完成。scorer=%s output_dim=%s", scorer_name, int(model.output_dim))
+        logger.info("Decision backbone built. scorer=%s output_dim=%s", scorer_name, int(model.output_dim))
         return model
 
     if str(scorer_name) == "mlp":
@@ -291,7 +291,7 @@ def _build_backbone(args: argparse.Namespace, scorer_name: str, input_dim: int) 
     if bool(getattr(args, "decision_id_features", False)) and cardinalities:
         model = IDAwareBackbone(model, cardinalities, int(getattr(args, "decision_id_embedding_dim", 16)), float(args.scorer_dropout))
 
-    logger.info("decision backbone构造完成。scorer=%s output_dim=%s", scorer_name, int(model.output_dim))
+    logger.info("Decision backbone built. scorer=%s output_dim=%s", scorer_name, int(model.output_dim))
     return model
 
 
@@ -305,7 +305,7 @@ def _quantile_from_sorted(sorted_values: np.ndarray, probs: np.ndarray) -> np.nd
 
 
 def _search_ordinal_split_nodes(labels: np.ndarray, bin_count: int, beta: float, logger) -> np.ndarray:
-    logger.info("开始搜索ordinal阈值。bins=%s beta=%.6f", int(bin_count), float(beta))
+    logger.info("Searching for ordinal thresholds. bins=%s beta=%.6f", int(bin_count), float(beta))
 
     flat_labels = labels.reshape(-1).astype(np.float32, copy=False)
     sorted_labels = np.sort(flat_labels)
@@ -332,7 +332,7 @@ def _search_ordinal_split_nodes(labels: np.ndarray, bin_count: int, beta: float,
             best_alpha = float(alpha)
             best_split = split_nodes.astype(np.float32, copy=True)
 
-    logger.info("ordinal阈值搜索完成。alpha=%.6f objective=%.6f", best_alpha, best_loss)
+    logger.info("Ordinal threshold search complete. alpha=%.6f objective=%.6f", best_alpha, best_loss)
     return best_split
 
 
@@ -365,7 +365,7 @@ def _fit_ordinal_decision(
     args: argparse.Namespace,
     logger,
 ) -> OrdinalDecisionModel:
-    logger.info("开始训练ordinal decision readout。scorer=%s rows=%s dim=%s", scorer_name, train_x.shape[0], train_x.shape[1])
+    logger.info("Training the ordinal decision readout. scorer=%s rows=%s dim=%s", scorer_name, train_x.shape[0], train_x.shape[1])
 
     backbone = _build_backbone(args, scorer_name, train_x.shape[1])
     split_nodes = _search_ordinal_split_nodes(train_time, int(args.ordinal_bins), float(args.ordinal_beta), logger)
@@ -381,7 +381,7 @@ def _fit_ordinal_decision(
         and ordinal_prior_weight <= 0.0
     )
     if use_sample_shuffle:
-        logger.info("ordinal decision使用sample-level shuffle，复原compact ablation C/E训练口径。")
+        logger.info("Ordinal decision uses sample-level shuffling to reproduce the compact ablation C/E training protocol.")
         train_loader = DataLoader(
             OrdinalDecisionDataset(train_x, train_time, train_rank),
             batch_size=batch_size,
@@ -442,14 +442,14 @@ def _fit_ordinal_decision(
                 losses.append(float(loss.detach().cpu()))
         val_pred, val_score = _predict_ordinal_decision(model, val_x, device, int(args.batch_size), val_ids)
         select_value = _validation_select_value(args.validation_select, val_time, val_pred, val_rank, val_score)
-        logger.info("ordinal decision epoch完成。scorer=%s epoch=%s loss=%.6f select=%.6f", scorer_name, epoch, float(np.mean(losses)), select_value)
+        logger.info("Ordinal-decision epoch complete. scorer=%s epoch=%s loss=%.6f select=%.6f", scorer_name, epoch, float(np.mean(losses)), select_value)
         if select_value < best_value:
             best_value = float(select_value)
             best_state = {key: value.detach().cpu().clone() for key, value in model.state_dict().items()}
 
     if best_state is not None:
         model.load_state_dict(best_state)
-    logger.info("ordinal decision readout训练完成。scorer=%s best_select=%.6f", scorer_name, best_value)
+    logger.info("Ordinal decision readout training complete. scorer=%s best_select=%.6f", scorer_name, best_value)
     return model
 
 
@@ -515,7 +515,7 @@ def _run_feature_set(
     args: argparse.Namespace,
     logger,
 ) -> dict[str, Any]:
-    logger.info("开始运行decision feature set。scorer=%s feature_set=%s", scorer_name, feature_set_name)
+    logger.info("Running the decision feature set. scorer=%s feature_set=%s", scorer_name, feature_set_name)
 
     train_x, val_x, test_x = _standardize(matrices["train"], matrices["val"], matrices["test"])
     rank_target = str(args.rank_target)
@@ -544,7 +544,7 @@ def _run_feature_set(
 
     save_predictions = getattr(args, "save_predictions", None)
     if save_predictions:
-        logger.info("开始保存decision测试预测。scorer=%s feature_set=%s", scorer_name, feature_set_name)
+        logger.info("Saving decision test predictions. scorer=%s feature_set=%s", scorer_name, feature_set_name)
 
         output_path = Path(str(save_predictions)).expanduser()
         if output_path.suffix:
@@ -564,7 +564,7 @@ def _run_feature_set(
             long_label=np.asarray(eval_arrays["long_label"], dtype=np.float32),
             overplay_label=np.asarray(eval_arrays["overplay_label"], dtype=np.float32),
         )
-        logger.info("decision测试预测保存完成。path=%s", output_path)
+        logger.info("Decision test predictions saved. path=%s", output_path)
 
     metrics = _evaluate_decision(
         test_pred,
@@ -577,5 +577,5 @@ def _run_feature_set(
         int(args.seed),
         logger,
     )
-    logger.info("decision feature set运行完成。scorer=%s feature_set=%s", scorer_name, feature_set_name)
+    logger.info("Decision feature-set run complete. scorer=%s feature_set=%s", scorer_name, feature_set_name)
     return metrics

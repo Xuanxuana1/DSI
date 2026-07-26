@@ -60,7 +60,7 @@ def set_seed(seed: int) -> None:
 
 
 def _quantile_from_sorted(sorted_values: np.ndarray, probs: np.ndarray) -> np.ndarray:
-    logger.debug("开始读取排序分位数。")
+    logger.debug("Reading ranking quantiles.")
 
     clipped = np.clip(probs.astype(np.float64, copy=False), 0.0, 1.0)
     positions = clipped * float(len(sorted_values) - 1)
@@ -69,12 +69,12 @@ def _quantile_from_sorted(sorted_values: np.ndarray, probs: np.ndarray) -> np.nd
     weight = positions - left.astype(np.float64)
 
     values = sorted_values[left] * (1.0 - weight) + sorted_values[right] * weight
-    logger.debug("排序分位数读取完成。")
+    logger.debug("Ranking quantiles loaded.")
     return values.astype(np.float32)
 
 
 def search_cread_split_nodes(labels: np.ndarray, head_num: int, beta: float) -> tuple[np.ndarray, dict[str, float]]:
-    logger.info("开始搜索CREAD阈值。heads=%d beta=%.6f", int(head_num), float(beta))
+    logger.info("Searching for CREAD thresholds. heads=%d beta=%.6f", int(head_num), float(beta))
 
     flat_labels = labels.reshape(-1).astype(np.float32, copy=False)
     sorted_labels = np.sort(flat_labels)
@@ -103,7 +103,7 @@ def search_cread_split_nodes(labels: np.ndarray, head_num: int, beta: float) -> 
             best_alpha = float(alpha)
             best_split = split_nodes.astype(np.float32, copy=True)
 
-    logger.info("CREAD阈值搜索完成。best_alpha=%.6f best_loss=%.6f", best_alpha, best_loss)
+    logger.info("CREAD threshold search complete. best_alpha=%.6f best_loss=%.6f", best_alpha, best_loss)
     return best_split, {
         "cread_split_search_alpha": best_alpha,
         "cread_split_search_beta": beta_value,
@@ -112,7 +112,7 @@ def search_cread_split_nodes(labels: np.ndarray, head_num: int, beta: float) -> 
 
 
 def build_ratio_quantile_table(labels: np.ndarray, durations: np.ndarray, bucket_num: int, quantile_bins: int) -> tuple[np.ndarray, np.ndarray]:
-    logger.info("开始构造DIFL ratio quantile表。bucket_num=%d quantile_bins=%d", int(bucket_num), int(quantile_bins))
+    logger.info("Building the DIFL ratio-quantile table. bucket_num=%d quantile_bins=%d", int(bucket_num), int(quantile_bins))
 
     edges = duration_quantile_edges(durations, int(bucket_num))
     bucket_ids = np.searchsorted(edges, durations.reshape(-1), side="left").astype(np.int64)
@@ -128,12 +128,12 @@ def build_ratio_quantile_table(labels: np.ndarray, durations: np.ndarray, bucket
             table[bucket_id] = np.quantile(ratio[mask], probs).astype(np.float32)
         else:
             table[bucket_id] = fallback
-    logger.info("DIFL ratio quantile表构造完成。actual_buckets=%d", bucket_count)
+    logger.info("DIFL ratio-quantile table built. actual_buckets=%d", bucket_count)
     return edges.astype(np.float32, copy=False), table
 
 
 def build_baseline(name: str, description: list[tuple[str, int, str]], args: argparse.Namespace) -> torch.nn.Module:
-    logger.info("开始构造baseline模型。name=%s", name)
+    logger.info("Building baseline model. name=%s", name)
 
     if name in {"vr", "wlr", "wd"}:
         model = WideAndDeep(
@@ -142,7 +142,7 @@ def build_baseline(name: str, description: list[tuple[str, int, str]], args: arg
             mlp_dims=tuple(int(v) for v in args.mlp_dims),
             dropout=float(args.dropout),
         )
-        logger.info("baseline模型构造完成。name=%s", name)
+        logger.info("Baseline model built. name=%s", name)
         return model
 
     if name == "cwm":
@@ -150,7 +150,7 @@ def build_baseline(name: str, description: list[tuple[str, int, str]], args: arg
             description,
             embed_dim=int(args.cwm_embed_dim),
         )
-        logger.info("baseline模型构造完成。name=%s", name)
+        logger.info("Baseline model built. name=%s", name)
         return model
 
     if name == "egmn":
@@ -161,7 +161,7 @@ def build_baseline(name: str, description: list[tuple[str, int, str]], args: arg
             dropout=float(args.egmn_dropout),
             components=int(args.egmn_components),
         )
-        logger.info("baseline模型构造完成。name=%s", name)
+        logger.info("Baseline model built. name=%s", name)
         return model
 
     if name == "tpm":
@@ -172,7 +172,7 @@ def build_baseline(name: str, description: list[tuple[str, int, str]], args: arg
             mlp_dims=tuple(int(v) for v in args.mlp_dims),
             dropout=float(args.dropout),
         )
-        logger.info("baseline模型构造完成。name=%s", name)
+        logger.info("Baseline model built. name=%s", name)
         return model
 
     if name == "d2q":
@@ -182,7 +182,7 @@ def build_baseline(name: str, description: list[tuple[str, int, str]], args: arg
             mlp_dims=tuple(int(v) for v in args.mlp_dims),
             dropout=float(args.dropout),
         )
-        logger.info("baseline模型构造完成。name=%s", name)
+        logger.info("Baseline model built. name=%s", name)
         return model
 
     if name == "cread":
@@ -194,7 +194,7 @@ def build_baseline(name: str, description: list[tuple[str, int, str]], args: arg
             head_num=int(args.cread_heads),
             dropout=float(args.dropout),
         )
-        logger.info("baseline模型构造完成。name=%s", name)
+        logger.info("Baseline model built. name=%s", name)
         return model
 
     if name == "gr":
@@ -210,7 +210,7 @@ def build_baseline(name: str, description: list[tuple[str, int, str]], args: arg
             dropout=float(args.gr_dropout),
             use_embedding_mixup=bool(args.gr_embedding_mixup),
         )
-        logger.info("baseline模型构造完成。name=%s", name)
+        logger.info("Baseline model built. name=%s", name)
         return model
 
     if name == "difl":
@@ -220,14 +220,14 @@ def build_baseline(name: str, description: list[tuple[str, int, str]], args: arg
             feat_dim=int(args.difl_feat_dim),
             dropout=float(args.difl_dropout),
         )
-        logger.info("baseline模型构造完成。name=%s", name)
+        logger.info("Baseline model built. name=%s", name)
         return model
 
     raise ValueError(f"Unsupported baseline: {name}")
 
 
 def apply_baseline_defaults(args: argparse.Namespace) -> None:
-    logger.info("开始应用统一baseline默认参数。baseline=%s", args.baseline)
+    logger.info("Applying shared baseline defaults. baseline=%s", args.baseline)
 
     if args.lr is None:
         if str(args.baseline) == "gr":
@@ -239,11 +239,11 @@ def apply_baseline_defaults(args: argparse.Namespace) -> None:
     if args.epochs is None:
         args.epochs = 5
 
-    logger.info("统一baseline默认参数应用完成。epochs=%d lr=%.6f", int(args.epochs), float(args.lr))
+    logger.info("Shared baseline defaults applied. epochs=%d lr=%.6f", int(args.epochs), float(args.lr))
 
 
 def prepare_gr_vocab_size(args: argparse.Namespace, loaders: DSIBaselineDataLoaders) -> dict[str, Any]:
-    logger.info("开始预构造GR词表。")
+    logger.info("Prebuilding the GR vocabulary.")
 
     train_dataset = loaders["train"].dataset
     labels = train_dataset.play_time.astype(np.float32, copy=False)
@@ -264,12 +264,12 @@ def prepare_gr_vocab_size(args: argparse.Namespace, loaders: DSIBaselineDataLoad
 
     args.gr_vocab_size = int(len(numeric_vocab) + 3)
     args.gr_numeric_vocab = [int(value) for value in numeric_vocab]
-    logger.info("GR词表预构造完成。vocab_size=%d numeric_tokens=%d", int(args.gr_vocab_size), int(len(numeric_vocab)))
+    logger.info("GR vocabulary prebuilt. vocab_size=%d numeric_tokens=%d", int(args.gr_vocab_size), int(len(numeric_vocab)))
     return {"gr_vocab_size": int(args.gr_vocab_size), "gr_numeric_tokens": int(len(numeric_vocab))}
 
 
 def bind_references(adapter, name: str, loaders: DSIBaselineDataLoaders, device: torch.device, args: argparse.Namespace) -> dict[str, Any]:
-    logger.info("开始绑定baseline辅助表。name=%s", name)
+    logger.info("Preparing baseline auxiliary tables. name=%s", name)
 
     train_dataset = loaders["train"].dataset
     labels = train_dataset.play_time.astype(np.float32, copy=False)
@@ -364,12 +364,12 @@ def bind_references(adapter, name: str, loaders: DSIBaselineDataLoaders, device:
         info["difl_quantile_bins"] = int(args.difl_quantile_bins)
         info["difl_micro_bs"] = int(args.difl_micro_bs)
 
-    logger.info("baseline辅助表绑定完成。name=%s", name)
+    logger.info("Baseline auxiliary tables ready. name=%s", name)
     return info
 
 
 def evaluate_light(adapter, loaders: DSIBaselineDataLoaders, split: str, device: torch.device) -> dict[str, float]:
-    logger.info("开始轻量评估baseline。split=%s", split)
+    logger.info("Running lightweight baseline evaluation. split=%s", split)
 
     adapter.eval()
     absolute_error_sum = 0.0
@@ -386,12 +386,12 @@ def evaluate_light(adapter, loaders: DSIBaselineDataLoaders, split: str, device:
     mae = absolute_error_sum / max(row_count, 1)
     rmse = float(np.sqrt(squared_error_sum / max(row_count, 1)))
     metrics = {"mae": float(mae), "rmse": float(rmse), "rows": float(row_count)}
-    logger.info("baseline轻量评估完成。split=%s mae=%.6f rmse=%.6f", split, metrics["mae"], metrics["rmse"])
+    logger.info("Lightweight baseline evaluation complete. split=%s mae=%.6f rmse=%.6f", split, metrics["mae"], metrics["rmse"])
     return metrics
 
 
 def train_base(adapter, loaders: DSIBaselineDataLoaders, args: argparse.Namespace, device: torch.device) -> list[dict[str, float]]:
-    logger.info("开始训练base baseline。epochs=%d lr=%.6f", int(args.epochs), float(args.lr))
+    logger.info("Training the base baseline. epochs=%d lr=%.6f", int(args.epochs), float(args.lr))
 
     baseline_name = str(getattr(args, "baseline", "")).lower()
     if baseline_name in {"d2q", "egmn"}:
@@ -400,7 +400,7 @@ def train_base(adapter, loaders: DSIBaselineDataLoaders, args: argparse.Namespac
     else:
         optimizer = torch.optim.Adam(adapter.parameters(), lr=float(args.lr), weight_decay=float(args.weight_decay))
         optimizer_name = "Adam"
-    logger.info("base baseline优化器选择完成。baseline=%s optimizer=%s", baseline_name, optimizer_name)
+    logger.info("Base baseline optimizer selected. baseline=%s optimizer=%s", baseline_name, optimizer_name)
     history: list[dict[str, float]] = []
 
     for epoch in range(1, int(args.epochs) + 1):
@@ -420,9 +420,9 @@ def train_base(adapter, loaders: DSIBaselineDataLoaders, args: argparse.Namespac
         val_metrics = evaluate_light(adapter, loaders, "val", device)
         row = {"epoch": float(epoch), "train_loss": float(train_loss), **{f"val_{k}": float(v) for k, v in val_metrics.items() if isinstance(v, (int, float))}}
         history.append(row)
-        logger.info("base训练完成一轮。epoch=%d train_loss=%.6f val_mae=%.6f", epoch, train_loss, val_metrics["mae"])
+        logger.info("Base training epoch complete. epoch=%d train_loss=%.6f val_mae=%.6f", epoch, train_loss, val_metrics["mae"])
 
-    logger.info("base baseline训练完成。")
+    logger.info("Base baseline training complete.")
     return history
 
 
@@ -463,7 +463,7 @@ def topk_session_value(score: np.ndarray, reward: np.ndarray, session_key: np.nd
 
 
 def evaluate(adapter, loaders: DSIBaselineDataLoaders, split: str, device: torch.device) -> dict[str, float]:
-    logger.info("开始评估baseline。split=%s", split)
+    logger.info("Evaluating the baseline. split=%s", split)
 
     adapter.eval()
 
@@ -511,7 +511,7 @@ def evaluate(adapter, loaders: DSIBaselineDataLoaders, split: str, device: torch
         "op_top5_rate": topk_session_value(pred, op_label, session, 5)["value"],
         "rows": float(len(y)),
     }
-    logger.info("baseline评估完成。split=%s mae=%.6f xauc=%.6f op_auc=%.6f", split, metrics["mae"], metrics["xauc"], metrics["op_auc"])
+    logger.info("Baseline evaluation complete. split=%s mae=%.6f xauc=%.6f op_auc=%.6f", split, metrics["mae"], metrics["xauc"], metrics["op_auc"])
     return metrics
 
 
@@ -624,7 +624,7 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as handle:
         json.dump(serialized_report, handle, indent=2, ensure_ascii=False)
-    logger.info("baseline报告写入完成。output=%s", output_path)
+    logger.info("Baseline report written. output=%s", output_path)
 
 
 if __name__ == "__main__":

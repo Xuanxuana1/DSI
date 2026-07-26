@@ -47,7 +47,7 @@ def _resolve_train_rows(config: dict[str, Any], value: Any) -> int:
 def _run_prepare(args: argparse.Namespace) -> None:
     config, _ = load_config(args.config)
     logger = setup_logging(config["outputs"]["prepare_log"])
-    logger.info("开始数据预处理。dataset=%s", config["data"]["name"])
+    logger.info("Preprocessing data. dataset=%s", config["data"]["name"])
 
     kind = _dataset_kind(config)
     if kind == "kuairec":
@@ -56,13 +56,13 @@ def _run_prepare(args: argparse.Namespace) -> None:
         prepare_kuairand(config, logger)
     else:
         prepare_wechat21(config, logger)
-    logger.info("数据预处理完成。processed_dir=%s", config["data"]["processed_dir"])
+    logger.info("Data preprocessing complete. processed_dir=%s", config["data"]["processed_dir"])
 
 
 def _run_train(args: argparse.Namespace) -> None:
     config, _ = load_config(args.config)
     logger = setup_logging(config["outputs"]["train_log"])
-    logger.info("开始训练provider。variant=%s seed=%d", args.variant, int(args.seed))
+    logger.info("Training the provider. variant=%s seed=%d", args.variant, int(args.seed))
 
     config["training"]["seed"] = int(args.seed)
     config["training"]["device"] = str(args.device)
@@ -71,7 +71,7 @@ def _run_train(args: argparse.Namespace) -> None:
     from dsi.training import train_model
 
     train_model(config, model_type, logger)
-    logger.info("provider训练完成。variant=%s", args.variant)
+    logger.info("Provider training complete. variant=%s", args.variant)
 
 
 def _run_readout(args: argparse.Namespace) -> None:
@@ -82,7 +82,7 @@ def _run_readout(args: argparse.Namespace) -> None:
     output = report_path(config_path, report_kind, int(args.seed), None)
     run_log = log_path(config_path, report_kind, int(args.seed), None)
     logger = setup_logging(run_log)
-    logger.info("开始决策读出。interface=%s seed=%d", args.interface, int(args.seed))
+    logger.info("Running decision readout. interface=%s seed=%d", args.interface, int(args.seed))
 
     interface_map = {
         "fused": ("auto", "fused"),
@@ -126,7 +126,7 @@ def _run_readout(args: argparse.Namespace) -> None:
     from dsi.decision.eval import main as readout_main
 
     run_module_main(readout_main, module_argv("dsi readout", command))
-    logger.info("决策读出完成。output=%s", output)
+    logger.info("Decision readout complete. output=%s", output)
 
 
 def _run_baseline(args: argparse.Namespace) -> None:
@@ -134,7 +134,7 @@ def _run_baseline(args: argparse.Namespace) -> None:
     paper = _paper_config()["baseline"]
     output = report_path(config_path, f"baseline_{args.method}", int(args.seed), None)
     run_log = log_path(config_path, f"baseline_{args.method}", int(args.seed), None)
-    setup_logging(run_log).info("开始训练baseline。method=%s seed=%d", args.method, int(args.seed))
+    setup_logging(run_log).info("Training the baseline. method=%s seed=%d", args.method, int(args.seed))
 
     command = [
         "--config", str(config_path),
@@ -157,7 +157,7 @@ def _run_matched(args: argparse.Namespace) -> None:
     paper = _paper_config()["matched_readout"]
     output = report_path(config_path, f"matched_{args.method}", int(args.seed), None)
     run_log = log_path(config_path, f"matched_{args.method}", int(args.seed), None)
-    setup_logging(run_log).info("开始匹配读出。method=%s seed=%d", args.method, int(args.seed))
+    setup_logging(run_log).info("Running matched readout. method=%s seed=%d", args.method, int(args.seed))
 
     command = [
         "--config", str(config_path),
@@ -227,11 +227,11 @@ def _run_ablation(args: argparse.Namespace) -> None:
         )
         run_config["outputs"]["train_log"] = str(log_path(config_path, f"ablation_{variant}_provider", int(args.seed), None))
         provider_logger = setup_logging(run_config["outputs"]["train_log"])
-        provider_logger.info("开始机制消融provider。variant=%s", variant)
+        provider_logger.info("Training the mechanism-ablation provider. variant=%s", variant)
         from dsi.training import train_model
 
         train_model(run_config, model_type, provider_logger)
-        provider_logger.info("机制消融provider完成。variant=%s", variant)
+        provider_logger.info("Mechanism-ablation provider training complete. variant=%s", variant)
 
     from dsi.utils.config import dump_config
 
@@ -317,7 +317,7 @@ def _run_transfer(args: argparse.Namespace) -> None:
     output = report_path(config_path, f"transfer_{source}_{args.task}", int(args.seed), None)
     run_log = log_path(config_path, f"transfer_{source}_{args.task}", int(args.seed), None)
     dsi_report = report_path(config_path, "decision", int(args.seed), None)
-    setup_logging(run_log).info("开始迁移probe。source=%s task=%s", source, args.task)
+    setup_logging(run_log).info("Running the transfer probe. source=%s task=%s", source, args.task)
 
     command = [
         "--config", str(config_path),
@@ -347,12 +347,12 @@ def _run_transfer(args: argparse.Namespace) -> None:
 
 def _run_smoke(_: argparse.Namespace) -> None:
     logger = setup_logging(None)
-    logger.info("开始smoke test。")
+    logger.info("Running the smoke test.")
 
     from tests.smoke import run_smoke
 
     run_smoke()
-    logger.info("smoke test完成。")
+    logger.info("Smoke test complete.")
 
 
 def _parser() -> argparse.ArgumentParser:

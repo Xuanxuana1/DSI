@@ -69,7 +69,7 @@ def observation_set_posterior_losses(
     lambda_duration_survival: float = 0.0,
     lambda_seconds_aux: float = 0.1,
 ) -> dict[str, torch.Tensor]:
-    _log_once("obs_set_posterior_start", "开始计算DSI observation-set posterior训练目标...")
+    _log_once("obs_set_posterior_start", "Computing the DSI observation-set posterior training objective...")
 
     watch_mass = observation_set_posterior_event_mass_from_output(
         output,
@@ -128,7 +128,7 @@ def observation_set_posterior_losses(
         raise ValueError(f"Unsupported observation-set restore_mode: {restore_mode}")
     event_prob = watch_mass.sum(dim=2).clamp_min(1e-12)
 
-    _log_once("obs_set_survival_start", "开始计算可选survival curve监督。")
+    _log_once("obs_set_survival_start", "Computing optional survival-curve supervision.")
 
     survival_bce = watch_loss.new_zeros(())
     if float(lambda_survival) > 0.0:
@@ -140,9 +140,9 @@ def observation_set_posterior_losses(
 
         survival_bce = F.binary_cross_entropy(survival_prob, survival_target)
 
-    _log_once("obs_set_survival_done", "可选survival curve监督计算完成。enabled=%s", bool(float(lambda_survival) > 0.0))
+    _log_once("obs_set_survival_done", "Optional survival-curve supervision computed. enabled=%s", bool(float(lambda_survival) > 0.0))
 
-    _log_once("ratio_obs_set_start", "开始计算可选ratio-aware support监督。")
+    _log_once("ratio_obs_set_start", "Computing optional ratio-aware support supervision.")
 
     ratio_nll = watch_loss.new_zeros(())
     ratio_restore_huber = watch_loss.new_zeros(())
@@ -201,9 +201,9 @@ def observation_set_posterior_losses(
         ratio_survival_target = (observed_ratio.view(-1, 1) > ratio_upper.view(1, -1)).to(dtype=watch_mass.dtype)
         ratio_survival_bce = F.binary_cross_entropy(ratio_survival_prob, ratio_survival_target)
 
-    _log_once("ratio_obs_set_done", "可选ratio-aware support监督计算完成。enabled=%s", bool(ratio_enabled))
+    _log_once("ratio_obs_set_done", "Optional ratio-aware support supervision computed. enabled=%s", bool(ratio_enabled))
 
-    _log_once("duration_survival_start", "开始计算可选duration-conditioned survival监督。")
+    _log_once("duration_survival_start", "Computing optional duration-conditioned survival supervision.")
 
     duration_survival_bce = watch_loss.new_zeros(())
     if float(lambda_duration_survival) > 0.0:
@@ -217,7 +217,7 @@ def observation_set_posterior_losses(
 
     _log_once(
         "duration_survival_done",
-        "可选duration-conditioned survival监督计算完成。enabled=%s",
+        "Optional duration-conditioned survival supervision computed. enabled=%s",
         bool(float(lambda_duration_survival) > 0.0),
     )
 
@@ -240,7 +240,7 @@ def observation_set_posterior_losses(
             + float(lambda_ratio) * (ratio_nll + float(lambda_restore) * ratio_restore_huber + ratio_survival_bce)
             + float(lambda_duration_survival) * duration_survival_bce
         )
-    _log_once("obs_set_posterior_done", "DSI observation-set posterior训练目标计算完成。")
+    _log_once("obs_set_posterior_done", "DSI observation-set posterior training objective computed.")
     return {
         "total": total,
         "obs_set_nll": watch_loss.detach(),
@@ -268,7 +268,7 @@ def time_only_posterior_losses(
     time_upper_bounds: torch.Tensor,
     restore_mode: str = "log",
 ) -> dict[str, torch.Tensor]:
-    _log_once("time_only_posterior_start", "开始计算time-only posterior训练目标。")
+    _log_once("time_only_posterior_start", "Computing the time-only posterior training objective.")
 
     logits = output["obs_set_logits"]
     time_mass = torch.softmax(logits[:, 0, :], dim=1)
@@ -298,7 +298,7 @@ def time_only_posterior_losses(
     watch_cif_nll = competing_risk_nll_from_event_mass(event_mass, batch["watch_event"], batch["time_bin"])
     watch_exact_nll = exact_event_time_nll_from_event_mass(event_mass, batch["watch_event"], batch["time_bin"])
     total = watch_loss + float(lambda_restore) * restore_huber
-    _log_once("time_only_posterior_done", "time-only posterior训练目标计算完成。")
+    _log_once("time_only_posterior_done", "Time-only posterior training objective computed.")
     zero = watch_loss.new_tensor(0.0)
     return {
         "total": total,

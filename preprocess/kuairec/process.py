@@ -217,7 +217,7 @@ def _stable_text_hash(text: str, buckets: int) -> int:
 
 
 def _read_caption_category_loose(path: Path, logger) -> pd.DataFrame:
-    logger.info("开始容错读取KuaiRec内容metadata。path=%s", path)
+    logger.info("Reading KuaiRec content metadata with malformed-row handling. path=%s", path)
 
     rows: list[dict[str, str]] = []
     bad_rows = 0
@@ -247,12 +247,12 @@ def _read_caption_category_loose(path: Path, logger) -> pd.DataFrame:
     metadata["video_id"] = pd.to_numeric(metadata["video_id"], errors="coerce").astype("Int64")
     metadata = metadata.dropna(subset=["video_id"]).copy()
     metadata["video_id"] = metadata["video_id"].astype(np.int64)
-    logger.info("KuaiRec内容metadata读取完成。rows=%s bad_rows=%s", len(metadata), bad_rows)
+    logger.info("KuaiRec content metadata loaded. rows=%s bad_rows=%s", len(metadata), bad_rows)
     return metadata
 
 
 def _read_matrix(config: dict[str, Any], logger) -> pd.DataFrame:
-    logger.info("开始读取KuaiRec交互矩阵...")
+    logger.info("Reading the KuaiRec interaction matrix...")
 
     data_cfg = config["data"]
     raw_dir = Path(data_cfg["raw_dir"]).expanduser().resolve()
@@ -272,12 +272,12 @@ def _read_matrix(config: dict[str, Any], logger) -> pd.DataFrame:
     else:
         raise FileNotFoundError(f"KuaiRec matrix not found: {csv_path} or {zip_path}")
 
-    logger.info("KuaiRec交互矩阵读取完成。rows=%s matrix=%s", len(frame), matrix_name)
+    logger.info("KuaiRec interaction matrix loaded. rows=%s matrix=%s", len(frame), matrix_name)
     return frame
 
 
 def _read_item_daily_video_type(config: dict[str, Any], logger) -> pd.DataFrame:
-    logger.info("开始读取KuaiRec item_daily video_type...")
+    logger.info("Reading KuaiRec item_daily video_type...")
 
     data_cfg = config["data"]
     raw_dir = Path(data_cfg["raw_dir"]).expanduser().resolve()
@@ -296,7 +296,7 @@ def _read_item_daily_video_type(config: dict[str, Any], logger) -> pd.DataFrame:
         raise FileNotFoundError(f"KuaiRec item_daily_features not found: {csv_path} or {zip_path}")
 
     frame = frame.drop_duplicates(subset=["video_id"], keep="first")
-    logger.info("KuaiRec item_daily video_type读取完成。rows=%s", len(frame))
+    logger.info("KuaiRec item_daily video_type loaded. rows=%s", len(frame))
     return frame
 
 
@@ -307,7 +307,7 @@ def _read_kuairec_csv(
     logger,
     nrows: int | None = None,
 ) -> pd.DataFrame:
-    logger.info("开始读取KuaiRec原始特征表。file=%s", filename)
+    logger.info("Reading a KuaiRec raw feature table. file=%s", filename)
 
     data_cfg = config["data"]
     raw_dir = Path(data_cfg["raw_dir"]).expanduser().resolve()
@@ -324,7 +324,7 @@ def _read_kuairec_csv(
     else:
         raise FileNotFoundError(f"KuaiRec raw table not found: {csv_path} or {zip_path}")
 
-    logger.info("KuaiRec原始特征表读取完成。file=%s rows=%s", filename, len(frame))
+    logger.info("KuaiRec raw feature table loaded. file=%s rows=%s", filename, len(frame))
     return frame
 
 
@@ -337,13 +337,13 @@ def _normalize_sparse_value(series: pd.Series) -> pd.Series:
 
 
 def _encode_sparse_columns(frame: pd.DataFrame, columns: list[str], logger) -> tuple[list[str], list[int], dict[str, dict[str, int]]]:
-    logger.info("开始编码KuaiRec原始稀疏特征。cols=%s", len(columns))
+    logger.info("Encoding KuaiRec raw sparse features. cols=%s", len(columns))
 
     raw_columns: list[str] = []
     cardinalities: list[int] = []
     audit: dict[str, dict[str, int]] = {}
     for idx, column in enumerate(columns):
-        logger.info("开始编码KuaiRec原始稀疏列。idx=%s col=%s", idx, column)
+        logger.info("Encoding a KuaiRec raw sparse column. idx=%s col=%s", idx, column)
         if column not in frame:
             encoded = np.zeros(len(frame), dtype=np.int64)
             cardinality = 1
@@ -379,14 +379,14 @@ def _encode_sparse_columns(frame: pd.DataFrame, columns: list[str], logger) -> t
             "cardinality": cardinality,
             "missing_rows": missing_rows,
         }
-        logger.info("KuaiRec原始稀疏列编码完成。idx=%s col=%s cardinality=%s missing=%s", idx, column, cardinality, missing_rows)
+        logger.info("KuaiRec raw sparse column encoded. idx=%s col=%s cardinality=%s missing=%s", idx, column, cardinality, missing_rows)
 
-    logger.info("KuaiRec原始稀疏特征编码完成。cols=%s", len(raw_columns))
+    logger.info("KuaiRec raw sparse features encoded. cols=%s", len(raw_columns))
     return raw_columns, cardinalities, audit
 
 
 def _encode_numeric_columns(frame: pd.DataFrame, columns: list[str], logger) -> tuple[list[str], dict[str, dict[str, int]]]:
-    logger.info("开始编码KuaiRec原始数值特征。cols=%s", len(columns))
+    logger.info("Encoding KuaiRec raw numeric features. cols=%s", len(columns))
 
     raw_columns: list[str] = []
     audit: dict[str, dict[str, int]] = {}
@@ -401,7 +401,7 @@ def _encode_numeric_columns(frame: pd.DataFrame, columns: list[str], logger) -> 
         raw_columns.append(raw_column)
         audit[column] = {"missing_rows": missing}
 
-    logger.info("KuaiRec原始数值特征编码完成。cols=%s", len(raw_columns))
+    logger.info("KuaiRec raw numeric features encoded. cols=%s", len(raw_columns))
     return raw_columns, audit
 
 
@@ -423,7 +423,7 @@ def _parse_feature_sequence(value: object) -> list[str]:
 
 
 def _attach_raw_features(frame: pd.DataFrame, config: dict[str, Any], logger) -> tuple[pd.DataFrame, dict[str, Any]]:
-    logger.info("开始合并KuaiRec原始特征...")
+    logger.info("Merging KuaiRec raw features...")
 
     user_features = _read_kuairec_csv(config, "user_features.csv", None, logger)
     frame = frame.merge(user_features, on="user_id", how="left")
@@ -510,7 +510,7 @@ def _attach_raw_features(frame: pd.DataFrame, config: dict[str, Any], logger) ->
         "include_aggregate_statistics": include_aggregate_statistics,
     }
     logger.info(
-        "KuaiRec原始特征合并完成。sparse=%s numeric=%s seq_len=%s",
+        "KuaiRec raw features merged. sparse=%s numeric=%s seq_len=%s",
         meta["num_raw_sparse_features"],
         meta["num_raw_numeric_features"],
         meta["raw_sequence_length"],
@@ -525,7 +525,7 @@ def _is_row_shuffle_split(config: dict[str, Any]) -> bool:
 
 
 def _apply_row_shuffle_protocol_filters(frame: pd.DataFrame, config: dict[str, Any], logger) -> tuple[pd.DataFrame, dict[str, Any]]:
-    logger.info("开始应用KuaiRec行级随机协议过滤...")
+    logger.info("Applying the KuaiRec row-level random-protocol filter...")
 
     before_rows = int(len(frame))
     item_daily = _read_item_daily_video_type(config, logger)
@@ -552,12 +552,12 @@ def _apply_row_shuffle_protocol_filters(frame: pd.DataFrame, config: dict[str, A
         "rows_after_filters": int(len(frame)),
         "split_shuffle_random_state": 1234,
     }
-    logger.info("KuaiRec行级随机协议过滤完成。audit=%s", audit)
+    logger.info("KuaiRec row-level random-protocol filtering complete. audit=%s", audit)
     return frame, audit
 
 
 def _sanitize_and_construct(frame: pd.DataFrame, config: dict[str, Any], upper_bounds: np.ndarray, logger) -> tuple[pd.DataFrame, dict[str, Any]]:
-    logger.info("开始构造KuaiRec事件标签和会话特征...")
+    logger.info("Building KuaiRec event labels and session features...")
 
     taxonomy = config["event_taxonomy"]
     prep = config["preprocessing"]
@@ -629,12 +629,12 @@ def _sanitize_and_construct(frame: pd.DataFrame, config: dict[str, Any], upper_b
         "watch_event_counts": {watch_event_names[idx]: int(value) for idx, value in watch_counts.items()},
         "session_end_count": int(frame["is_session_end"].sum()),
     }
-    logger.info("KuaiRec事件标签和会话特征构造完成。sessions=%s", audit["sessions"])
+    logger.info("KuaiRec event labels and session features built. sessions=%s", audit["sessions"])
     return frame, audit
 
 
 def _encode_ids(frame: pd.DataFrame, logger) -> dict[str, int]:
-    logger.info("开始编码KuaiRec用户和视频ID...")
+    logger.info("Encoding KuaiRec user and video IDs...")
 
     frame["user_idx"] = pd.factorize(frame["user_id"], sort=True)[0].astype(np.int64)
     frame["item_idx"] = pd.factorize(frame["video_id"], sort=True)[0].astype(np.int64)
@@ -643,12 +643,12 @@ def _encode_ids(frame: pd.DataFrame, logger) -> dict[str, int]:
         "num_users": int(frame["user_idx"].max()) + 1,
         "num_items": int(frame["item_idx"].max()) + 1,
     }
-    logger.info("KuaiRec用户和视频ID编码完成。users=%s items=%s", cardinality["num_users"], cardinality["num_items"])
+    logger.info("KuaiRec user and video IDs encoded. users=%s items=%s", cardinality["num_users"], cardinality["num_items"])
     return cardinality
 
 
 def _assign_splits(frame: pd.DataFrame, ratios: list[float], logger) -> pd.Series:
-    logger.info("开始划分KuaiRec标准split...")
+    logger.info("Creating the standard KuaiRec split...")
 
     session_info = (
         frame.groupby("session_key", sort=False)
@@ -664,12 +664,12 @@ def _assign_splits(frame: pd.DataFrame, ratios: list[float], logger) -> pd.Serie
     mapping = dict(zip(session_info["session_key"], session_info["split"]))
 
     split = frame["session_key"].map(mapping)
-    logger.info("KuaiRec标准split划分完成。")
+    logger.info("Standard KuaiRec split created.")
     return split
 
 
 def _assign_row_shuffle_splits(frame: pd.DataFrame, ratios: list[float], logger) -> pd.Series:
-    logger.info("开始划分KuaiRec行级随机split...")
+    logger.info("Creating the KuaiRec row-level random split...")
 
     shuffled_index = frame.sample(frac=1.0, random_state=1234).index.to_numpy()
     n_rows = int(len(shuffled_index))
@@ -681,7 +681,7 @@ def _assign_row_shuffle_splits(frame: pd.DataFrame, ratios: list[float], logger)
     split.loc[shuffled_index[n_train:n_val_end]] = "val"
     split.loc[shuffled_index[n_val_end:]] = "test"
     logger.info(
-        "KuaiRec行级随机split划分完成。train=%s val=%s test=%s",
+        "KuaiRec row-level random split created. train=%s val=%s test=%s",
         int((split == "train").sum()),
         int((split == "val").sum()),
         int((split == "test").sum()),
@@ -764,7 +764,7 @@ def _build_item_content_features(
     output_dir: Path,
     logger,
 ) -> dict[str, Any]:
-    logger.info("开始构造KuaiRec内容特征...")
+    logger.info("Building KuaiRec content features...")
 
     content_cfg = config.get("content_features", {})
     num_items = int(cardinality["num_items"])
@@ -775,7 +775,7 @@ def _build_item_content_features(
             content_category=np.zeros((num_items, 0), dtype=np.int64),
             content_numeric=np.zeros((num_items, 0), dtype=np.float32),
         )
-        logger.info("KuaiRec内容特征关闭，写出空item_content。")
+        logger.info("KuaiRec content features disabled; writing empty item_content.")
         return {
             "enabled": False,
             "num_content_category_levels": 0,
@@ -817,7 +817,7 @@ def _build_item_content_features(
     content_numeric_names: list[str] = []
     text_audit: dict[str, Any] = {}
     if include_text_features:
-        logger.info("开始构造KuaiRec旧文本内容特征。")
+        logger.info("Building legacy KuaiRec text content features.")
 
         caption_text = _clean_text(aligned["caption"])
         cover_text = _clean_text(aligned["manual_cover_text"])
@@ -855,7 +855,7 @@ def _build_item_content_features(
             "cover_text_non_empty_rows": int(has_cover_text.sum()),
             "any_text_non_empty_rows": int(has_any_text.sum()),
         }
-        logger.info("KuaiRec旧文本内容特征构造完成。text_hash_buckets=%s", text_hash_buckets)
+        logger.info("Legacy KuaiRec text content features built. text_hash_buckets=%s", text_hash_buckets)
     else:
         content_numeric = np.zeros((num_items, 0), dtype=np.float32)
         content_numeric_names = []
@@ -880,7 +880,7 @@ def _build_item_content_features(
     if include_text_features:
         meta["text_audit"] = text_audit
     logger.info(
-        "KuaiRec内容特征构造完成。category_levels=%s numeric=%s",
+        "KuaiRec content features built. category_levels=%s numeric=%s",
         meta["num_content_category_levels"],
         meta["num_content_numeric_features"],
     )
@@ -896,7 +896,7 @@ def _save_npz(path: Path, arrays: dict[str, np.ndarray], compressed: bool) -> No
 
 
 def prepare_kuairec(config: dict[str, Any], logger) -> dict[str, Any]:
-    logger.info("开始KuaiRec benchmark预处理...")
+    logger.info("Preprocessing the KuaiRec benchmark...")
 
     output_dir = Path(config["data"]["processed_dir"]).expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -966,5 +966,5 @@ def prepare_kuairec(config: dict[str, Any], logger) -> dict[str, Any]:
     with (output_dir / "manifest.json").open("w", encoding="utf-8") as handle:
         json.dump(manifest, handle, indent=2, ensure_ascii=False)
 
-    logger.info("KuaiRec benchmark预处理完成。split_counts=%s", split_counts)
+    logger.info("KuaiRec benchmark preprocessing complete. split_counts=%s", split_counts)
     return manifest

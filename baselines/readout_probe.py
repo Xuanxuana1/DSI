@@ -163,7 +163,7 @@ def _labels(dataset: DSIBaselineDataset, index: np.ndarray | None = None) -> dic
 
 
 def _baseline_raw_context(dataset: DSIBaselineDataset, index: np.ndarray | None) -> np.ndarray:
-    logger.info("开始构造baseline raw context。")
+    logger.info("Building baseline raw context.")
 
     arrays = {
         "numeric": dataset.numeric,
@@ -175,15 +175,15 @@ def _baseline_raw_context(dataset: DSIBaselineDataset, index: np.ndarray | None)
     }
 
     raw_context, _ = _raw_features(arrays, index)
-    logger.info("baseline raw context构造完成。dim=%d", int(raw_context.shape[1]))
+    logger.info("Baseline raw context built. dim=%d", int(raw_context.shape[1]))
     return raw_context
 
 
 def _pad_readout_matrix(matrix: np.ndarray, target_dim: int | None) -> np.ndarray:
-    logger.info("开始对齐readout输入宽度。current=%d target=%s", int(matrix.shape[1]), target_dim)
+    logger.info("Aligning readout input width. current=%d target=%s", int(matrix.shape[1]), target_dim)
 
     if target_dim is None:
-        logger.info("readout输入宽度无需对齐。")
+        logger.info("Readout input width already aligned.")
         return matrix
 
     target = int(target_dim)
@@ -196,7 +196,7 @@ def _pad_readout_matrix(matrix: np.ndarray, target_dim: int | None) -> np.ndarra
     else:
         padding = np.zeros((matrix.shape[0], target - current), dtype=np.float32)
         output = np.concatenate([matrix, padding], axis=1).astype(np.float32, copy=False)
-    logger.info("readout输入宽度对齐完成。dim=%d", int(output.shape[1]))
+    logger.info("Readout input width aligned. dim=%d", int(output.shape[1]))
     return output
 
 
@@ -212,7 +212,7 @@ def _collect_representation(
     name: str,
 ) -> np.ndarray:
     row_count = len(dataset) if index is None else int(index.shape[0])
-    logger.info("开始抽取baseline表征。name=%s rows=%d", name, row_count)
+    logger.info("Extracting baseline representations. name=%s rows=%d", name, row_count)
     adapter.eval()
     parts: list[np.ndarray] = []
     for batch_index in _iter_index(index, len(dataset), int(batch_size)):
@@ -226,7 +226,7 @@ def _collect_representation(
             columns.append(hidden.detach().cpu().numpy().astype(np.float32, copy=False))
         parts.append(np.concatenate(columns, axis=1))
     output = np.concatenate(parts, axis=0).astype(np.float32, copy=False)
-    logger.info("baseline表征抽取完成。name=%s shape=%s", name, tuple(output.shape))
+    logger.info("Baseline representations extracted. name=%s shape=%s", name, tuple(output.shape))
     return output
 
 
@@ -373,7 +373,7 @@ def _collect_native_interface(
     device: torch.device,
     name: str,
 ) -> tuple[np.ndarray, dict[str, np.ndarray]]:
-    logger.info("开始抽取baseline原生接口。name=%s rows=%d", name, len(dataset))
+    logger.info("Extracting the baseline native interface. name=%s rows=%d", name, len(dataset))
 
     adapter.eval()
     representation_parts: list[np.ndarray] = []
@@ -385,11 +385,11 @@ def _collect_native_interface(
         for task in score_parts:
             score_parts[task].append(scores[task].detach().cpu().numpy().astype(np.float32, copy=False))
         if batch_number % 200 == 0:
-            logger.info("baseline原生接口抽取进度。name=%s batches=%d", name, batch_number)
+            logger.info("Baseline native-interface extraction progress. name=%s batches=%d", name, batch_number)
 
     output = np.concatenate(representation_parts, axis=0).astype(np.float32, copy=False)
     scores = {task: np.concatenate(parts, axis=0).astype(np.float32, copy=False) for task, parts in score_parts.items()}
-    logger.info("baseline原生接口抽取完成。name=%s shape=%s", name, tuple(output.shape))
+    logger.info("Baseline native interface extracted. name=%s shape=%s", name, tuple(output.shape))
     return output, scores
 
 
@@ -410,19 +410,19 @@ def _interface_cache_path(config: dict[str, Any], args: argparse.Namespace, base
 
 
 def _load_native_interface_cache(cache_path: Path) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, Any]] | None:
-    logger.info("开始读取baseline原生接口缓存。path=%s", cache_path)
+    logger.info("Reading the baseline native-interface cache. path=%s", cache_path)
 
     metadata_path = cache_path / "metadata.json"
     required = [cache_path / f"representation_{split}.npy" for split in ("train", "val", "test")]
     required.extend(cache_path / f"score_{task}_test.npy" for task in ("long", "overplay"))
     if not metadata_path.exists() or not all(path.exists() for path in required):
-        logger.info("baseline原生接口缓存未命中。")
+        logger.info("Baseline native-interface cache miss.")
         return None
 
     representation = {split: np.load(cache_path / f"representation_{split}.npy", mmap_mode="r") for split in ("train", "val", "test")}
     scores = {task: np.load(cache_path / f"score_{task}_test.npy", mmap_mode="r") for task in ("long", "overplay")}
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-    logger.info("baseline原生接口缓存读取完成。dim=%d", int(representation["train"].shape[1]))
+    logger.info("Baseline native-interface cache loaded. dim=%d", int(representation["train"].shape[1]))
     return representation, scores, metadata
 
 
@@ -432,7 +432,7 @@ def _save_native_interface_cache(
     scores: dict[str, np.ndarray],
     metadata: dict[str, Any],
 ) -> None:
-    logger.info("开始保存baseline原生接口缓存。path=%s", cache_path)
+    logger.info("Saving the baseline native-interface cache. path=%s", cache_path)
 
     cache_path.mkdir(parents=True, exist_ok=True)
     for split, value in representation.items():
@@ -445,7 +445,7 @@ def _save_native_interface_cache(
         json.dumps(serialized_metadata, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
-    logger.info("baseline原生接口缓存保存完成。")
+    logger.info("Baseline native-interface cache saved.")
 
 
 def _load_or_build_native_interface(
@@ -455,7 +455,7 @@ def _load_or_build_native_interface(
     device: torch.device,
     baseline_args: argparse.Namespace | None = None,
 ) -> tuple[DSIBaselineDataLoaders, dict[str, np.ndarray], dict[str, np.ndarray], dict[str, Any]]:
-    logger.info("开始准备baseline原生接口。baseline=%s", baseline)
+    logger.info("Preparing the baseline native interface. baseline=%s", baseline)
 
     loaders = DSIBaselineDataLoaders(
         config["data"]["processed_dir"],
@@ -472,7 +472,7 @@ def _load_or_build_native_interface(
     cached = None if bool(args.refresh_interface_cache) else _load_native_interface_cache(cache_path)
     if cached is not None:
         representation, scores, metadata = cached
-        logger.info("baseline原生接口准备完成。baseline=%s source=cache", baseline)
+        logger.info("Baseline native interface prepared. baseline=%s source=cache", baseline)
         return loaders, representation, scores, metadata
 
     provider_args = baseline_args if baseline_args is not None else _baseline_namespace(args, baseline)
@@ -511,7 +511,7 @@ def _load_or_build_native_interface(
     if loaded is None:
         raise RuntimeError(f"Failed to reload native interface cache: {cache_path}")
     cached_representation, cached_scores, cached_metadata = loaded
-    logger.info("baseline原生接口准备完成。baseline=%s source=trained", baseline)
+    logger.info("Baseline native interface prepared. baseline=%s source=trained", baseline)
     return loaders, cached_representation, cached_scores, cached_metadata
 
 
@@ -528,7 +528,7 @@ def _readout_payload(loaders: DSIBaselineDataLoaders, train_index: np.ndarray | 
 
 
 def _run_one_baseline(config: dict[str, Any], args: argparse.Namespace, baseline: str, device: torch.device) -> dict[str, Any]:
-    logger.info("开始baseline公平readout实验。baseline=%s protocol=%s", baseline, args.representation_protocol)
+    logger.info("Running the controlled baseline readout experiment. baseline=%s protocol=%s", baseline, args.representation_protocol)
 
     baseline_args = _baseline_namespace(args, baseline)
     apply_baseline_defaults(baseline_args)
@@ -582,7 +582,7 @@ def _run_one_baseline(config: dict[str, Any], args: argparse.Namespace, baseline
         cache_path = None
         representation_columns = ["p_duration_proxy", "log1p_proxy", "hidden"]
 
-    logger.info("开始构造baseline readout输入。representation_only=%s", bool(args.representation_only))
+    logger.info("Building baseline readout inputs. representation_only=%s", bool(args.representation_only))
 
     raw_context = None
     if not bool(args.representation_only):
@@ -601,7 +601,7 @@ def _run_one_baseline(config: dict[str, Any], args: argparse.Namespace, baseline
         )
         for split in ["train", "val", "test"]
     }
-    logger.info("baseline readout输入构造完成。dim=%d", int(matrices["train"].shape[1]))
+    logger.info("Baseline readout inputs built. dim=%d", int(matrices["train"].shape[1]))
     labels, play_time, eval_arrays = _readout_payload(loaders, train_index)
 
     seed_feature_key = "posterior" if bool(args.representation_only) else "fused"
@@ -618,7 +618,7 @@ def _run_one_baseline(config: dict[str, Any], args: argparse.Namespace, baseline
         args,
         logger,
     )
-    logger.info("baseline公平readout实验完成。baseline=%s", baseline)
+    logger.info("Controlled baseline readout experiment complete. baseline=%s", baseline)
     return {
         "baseline": baseline,
         "reference_info": reference_info,
@@ -640,7 +640,7 @@ def _run_one_baseline(config: dict[str, Any], args: argparse.Namespace, baseline
 
 
 def _build_generic_encoder(config: dict[str, Any], manifest: dict[str, Any]) -> GenericLatentControlModel:
-    logger.info("开始构造generic encoder。")
+    logger.info("Building the generic encoder.")
 
     model_cfg = config["model"]
     model = GenericLatentControlModel(
@@ -654,7 +654,7 @@ def _build_generic_encoder(config: dict[str, Any], manifest: dict[str, Any]) -> 
         use_raw_features=bool(model_cfg.get("use_raw_features", True)),
     )
 
-    logger.info("generic encoder构造完成。")
+    logger.info("Generic encoder built.")
     return model
 
 
@@ -673,7 +673,7 @@ def _generic_loss(output: dict[str, torch.Tensor], batch: dict[str, torch.Tensor
 
 
 def _generic_validation_loss(model: GenericLatentControlModel, loader, device: torch.device, restore_weight: float) -> float:
-    logger.info("开始计算generic encoder验证损失。")
+    logger.info("Computing generic-encoder validation loss.")
     model.eval()
     loss_sum = 0.0
     row_count = 0
@@ -687,12 +687,12 @@ def _generic_validation_loss(model: GenericLatentControlModel, loader, device: t
         row_count += batch_rows
 
     value = loss_sum / max(row_count, 1)
-    logger.info("generic encoder验证损失计算完成。loss=%.6f rows=%d", value, row_count)
+    logger.info("Generic-encoder validation loss computed. loss=%.6f rows=%d", value, row_count)
     return float(value)
 
 
 def _train_generic_encoder(config: dict[str, Any], args: argparse.Namespace, device: torch.device) -> tuple[GenericLatentControlModel, dict[str, Any], dict[str, Any]]:
-    logger.info("开始训练generic encoder。")
+    logger.info("Training the generic encoder.")
 
     train_config = copy.deepcopy(config)
     train_config.setdefault("debug", {})
@@ -731,7 +731,7 @@ def _train_generic_encoder(config: dict[str, Any], args: argparse.Namespace, dev
     bad_epochs = 0
     history: list[dict[str, float | int]] = []
     for epoch in range(1, int(train_config["training"]["epochs"]) + 1):
-        logger.info("开始generic encoder训练epoch。epoch=%d", epoch)
+        logger.info("Starting generic-encoder training epoch. epoch=%d", epoch)
         model.train()
         total_sum = 0.0
         event_sum = 0.0
@@ -763,7 +763,7 @@ def _train_generic_encoder(config: dict[str, Any], args: argparse.Namespace, dev
         }
         history.append(row)
         logger.info(
-            "generic encoder训练epoch完成。epoch=%d train=%.6f val=%.6f",
+            "Generic-encoder training epoch complete. epoch=%d train=%.6f val=%.6f",
             epoch,
             row["train_loss"],
             row["val_loss"],
@@ -785,7 +785,7 @@ def _train_generic_encoder(config: dict[str, Any], args: argparse.Namespace, dev
         else:
             bad_epochs += 1
             if bad_epochs >= int(train_config["training"].get("patience", 2)):
-                logger.info("generic encoder提前停止。epoch=%d", epoch)
+                logger.info("Generic-encoder early stopping triggered. epoch=%d", epoch)
                 break
 
     checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -801,7 +801,7 @@ def _train_generic_encoder(config: dict[str, Any], args: argparse.Namespace, dev
         "history": history,
     }
     logger.info(
-        "generic encoder训练完成。params=%d matched_provider=%d overhead=%.6f",
+        "Generic-encoder training complete. params=%d matched_provider=%d overhead=%.6f",
         total_params,
         matched_provider_params,
         audit["relative_parameter_overhead"],
@@ -814,7 +814,7 @@ def _train_generic_encoder(config: dict[str, Any], args: argparse.Namespace, dev
 
 def _collect_generic_latent(model: GenericLatentControlModel, dataset, index: np.ndarray | None, batch_size: int, device: torch.device) -> np.ndarray:
     row_count = len(dataset) if index is None else int(index.shape[0])
-    logger.info("开始抽取generic latent。rows=%d", row_count)
+    logger.info("Extracting generic latent features. rows=%d", row_count)
     model.eval()
     parts: list[np.ndarray] = []
 
@@ -825,7 +825,7 @@ def _collect_generic_latent(model: GenericLatentControlModel, dataset, index: np
         parts.append(latent.detach().cpu().numpy().astype(np.float32, copy=False))
 
     output = np.concatenate(parts, axis=0).astype(np.float32, copy=False)
-    logger.info("generic latent抽取完成。shape=%s", tuple(output.shape))
+    logger.info("Generic latent features extracted. shape=%s", tuple(output.shape))
     return output
 
 
@@ -845,7 +845,7 @@ def _generic_label_payload(dataset, index: np.ndarray | None = None) -> dict[str
 
 
 def _run_generic_control(config: dict[str, Any], args: argparse.Namespace, device: torch.device) -> dict[str, Any]:
-    logger.info("开始generic latent公平对照。")
+    logger.info("Running the controlled generic-latent comparison.")
 
     model, loaders, audit = _train_generic_encoder(config, args, device)
     train_dataset = loaders["standard_train"].dataset
@@ -893,7 +893,7 @@ def _run_generic_control(config: dict[str, Any], args: argparse.Namespace, devic
         logger,
     )
 
-    logger.info("generic latent公平对照完成。")
+    logger.info("Controlled generic-latent comparison complete.")
     return {
         "baseline": "generic",
         "encoder": audit,
@@ -969,7 +969,7 @@ def main() -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as handle:
         json.dump(serialized_report, handle, indent=2, ensure_ascii=False)
-    logger.info("baseline公平readout报告写入完成。output=%s", output_path)
+    logger.info("Controlled baseline readout report written. output=%s", output_path)
     print(json.dumps(serialized_report, indent=2, ensure_ascii=False))
 
 

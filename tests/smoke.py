@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 def _split_arrays(rows: int, seed: int, upper: np.ndarray) -> dict[str, np.ndarray]:
     rng = np.random.default_rng(int(seed))
-    logger.info("开始构造合成split。rows=%d seed=%d", int(rows), int(seed))
+    logger.info("Building the synthetic split. rows=%d seed=%d", int(rows), int(seed))
 
     duration = rng.uniform(4.0, 30.0, size=rows).astype(np.float32)
     event = np.arange(rows, dtype=np.int64) % 4
@@ -64,12 +64,12 @@ def _split_arrays(rows: int, seed: int, upper: np.ndarray) -> dict[str, np.ndarr
         "raw_seq": np.zeros((rows, 0), dtype=np.int64),
         "raw_seq_mask": np.zeros((rows, 0), dtype=np.float32),
     }
-    logger.info("合成split构造完成。rows=%d", int(rows))
+    logger.info("Synthetic split built. rows=%d", int(rows))
     return arrays
 
 
 def _write_fixture(root: Path) -> Path:
-    logger.info("开始写出smoke fixture。root=%s", root)
+    logger.info("Writing the smoke fixture. root=%s", root)
     processed = root / "processed"
     processed.mkdir(parents=True, exist_ok=True)
     upper = build_time_bin_upper_bounds(60, 1800, 1.5)
@@ -108,12 +108,12 @@ def _write_fixture(root: Path) -> Path:
         "split_counts": {f"standard_{key}": int(value) for key, value in counts.items()},
     }
     (processed / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    logger.info("smoke fixture写出完成。processed=%s", processed)
+    logger.info("Smoke fixture written. processed=%s", processed)
     return processed
 
 
 def _smoke_config(root: Path, processed: Path) -> dict:
-    logger.info("开始构造smoke配置。")
+    logger.info("Building the smoke configuration.")
     config = load_config(Path(__file__).resolve().parents[1] / "configs" / "datasets" / "kuairec.yaml")
 
     config["data"]["name"] = "DSI-Smoke"
@@ -129,12 +129,12 @@ def _smoke_config(root: Path, processed: Path) -> dict:
     smoke_config_path = root / "smoke.yaml"
     config["_config_path"] = str(smoke_config_path)
     dump_config(config, smoke_config_path, portable_paths=False)
-    logger.info("smoke配置构造完成。")
+    logger.info("Smoke configuration built.")
     return config
 
 
 def _smoke_readout(config: dict, processed: Path, run_root: Path) -> dict:
-    logger.info("开始smoke决策读出。")
+    logger.info("Running the smoke decision readout.")
     device = torch.device("cpu")
     source = FeatureSource("dsi", "obs_set_posterior", Path(config["_config_path"]), run_root)
     manifest = json.loads((processed / "manifest.json").read_text(encoding="utf-8"))
@@ -197,12 +197,12 @@ def _smoke_readout(config: dict, processed: Path, run_root: Path) -> dict:
         decision_sparse_cardinalities=[],
     )
     result = _run_feature_set("dcn", "fused", splits, labels, play_time, None, test_eval, device, args, logger)
-    logger.info("smoke决策读出完成。")
+    logger.info("Smoke decision readout complete.")
     return result
 
 
 def _smoke_baseline(config: dict, processed: Path) -> dict:
-    logger.info("开始smoke baseline。")
+    logger.info("Running the smoke baseline.")
     device = torch.device("cpu")
     loaders = DSIBaselineDataLoaders(str(processed), device, 32, num_workers=0, include_raw_features=False)
 
@@ -238,14 +238,14 @@ def _smoke_baseline(config: dict, processed: Path) -> dict:
     adapter = build_adapter("vr", model).to(device)
     train_base(adapter, loaders, args, device)
     result = evaluate(adapter, loaders, "test", device)
-    logger.info("smoke baseline完成。")
+    logger.info("Smoke baseline complete.")
     return result
 
 
 def run_smoke() -> dict:
     global logger
     logger = setup_logging(None)
-    logger.info("开始完整smoke链路。")
+    logger.info("Running the full smoke pipeline.")
 
     with tempfile.TemporaryDirectory(prefix="dsi-smoke-") as temp:
         root = Path(temp)
@@ -279,5 +279,5 @@ def run_smoke() -> dict:
             "readout": {key: float(value) for key, value in readout_values.items()},
             "baseline": {key: float(baseline[key]) for key in sorted(required_baseline)},
         }
-    logger.info("完整smoke链路完成。result=%s", result)
+    logger.info("Full smoke pipeline complete. result=%s", result)
     return result

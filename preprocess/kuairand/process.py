@@ -411,7 +411,7 @@ def _normalize_sparse_value(series: pd.Series) -> pd.Series:
 
 
 def _encode_sparse_columns(frames: list[pd.DataFrame], columns: list[str], logger) -> tuple[list[str], list[int], dict[str, dict[str, int]]]:
-    logger.info("开始编码KuaiRand原始稀疏特征。cols=%s", len(columns))
+    logger.info("Encoding KuaiRand raw sparse features. cols=%s", len(columns))
 
     raw_columns: list[str] = []
     cardinalities: list[int] = []
@@ -434,12 +434,12 @@ def _encode_sparse_columns(frames: list[pd.DataFrame], columns: list[str], logge
             "missing_rows": int((combined == "").sum()),
         }
 
-    logger.info("KuaiRand原始稀疏特征编码完成。cols=%s", len(raw_columns))
+    logger.info("KuaiRand raw sparse features encoded. cols=%s", len(raw_columns))
     return raw_columns, cardinalities, audit
 
 
 def _encode_numeric_columns(frames: list[pd.DataFrame], columns: list[str], logger) -> tuple[list[str], dict[str, dict[str, int]]]:
-    logger.info("开始编码KuaiRand原始数值特征。cols=%s", len(columns))
+    logger.info("Encoding KuaiRand raw numeric features. cols=%s", len(columns))
 
     raw_columns: list[str] = []
     audit: dict[str, dict[str, int]] = {}
@@ -456,7 +456,7 @@ def _encode_numeric_columns(frames: list[pd.DataFrame], columns: list[str], logg
         raw_columns.append(raw_column)
         audit[column] = {"missing_rows": missing_total}
 
-    logger.info("KuaiRand原始数值特征编码完成。cols=%s", len(raw_columns))
+    logger.info("KuaiRand raw numeric features encoded. cols=%s", len(raw_columns))
     return raw_columns, audit
 
 
@@ -486,7 +486,7 @@ def _parse_feature_sequence(value: object) -> list[str]:
 
 
 def _load_video_statistics(data_dir: Path, version_suffix: str, logger) -> pd.DataFrame:
-    logger.info("开始读取KuaiRand video statistic原始表。suffix=%s", version_suffix)
+    logger.info("Reading raw KuaiRand video-statistics tables. suffix=%s", version_suffix)
 
     files = sorted(data_dir.glob(f"video_features_statistic_{version_suffix}*.csv"))
     if not files:
@@ -501,7 +501,7 @@ def _load_video_statistics(data_dir: Path, version_suffix: str, logger) -> pd.Da
         }
     )
     frame = frame.drop_duplicates(subset=["video_id"], keep="first")
-    logger.info("KuaiRand video statistic读取完成。files=%s rows=%s", len(files), len(frame))
+    logger.info("KuaiRand video statistics loaded. files=%s rows=%s", len(files), len(frame))
     return frame
 
 
@@ -513,7 +513,7 @@ def _attach_raw_features(
     config: dict[str, Any],
     logger,
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
-    logger.info("开始合并KuaiRand原始特征...")
+    logger.info("Merging KuaiRand raw features...")
 
     user_features = pd.read_csv(data_dir / f"user_features_{version_suffix}.csv")
     video_basic = pd.read_csv(data_dir / f"video_features_basic_{version_suffix}.csv")
@@ -607,7 +607,7 @@ def _attach_raw_features(
         ],
     }
     logger.info(
-        "KuaiRand原始特征合并完成。sparse=%s numeric=%s seq_len=%s",
+        "KuaiRand raw features merged. sparse=%s numeric=%s seq_len=%s",
         meta["num_raw_sparse_features"],
         meta["num_raw_numeric_features"],
         meta["raw_sequence_length"],
@@ -928,7 +928,7 @@ def prepare_kuairand(config: dict[str, Any], logger) -> dict[str, Any]:
     logger.info("Constructing random event taxonomy")
     random, random_audit = _construct_events(random, config, upper_bounds)
 
-    logger.info("开始处理KuaiRand原始特征开关...")
+    logger.info("Processing the KuaiRand raw-feature setting...")
     if bool(config.get("raw_features", {}).get("enabled", True)):
 
         logger.info("Attaching raw KuaiRand features")
@@ -958,8 +958,8 @@ def prepare_kuairand(config: dict[str, Any], logger) -> dict[str, Any]:
             "raw_sequence_length": 0,
             "include_aggregate_statistics": False,
         }
-        logger.info("KuaiRand原始特征已跳过，使用clean schema。")
-    logger.info("KuaiRand原始特征开关处理完成。enabled=%s", bool(raw_feature_meta.get("enabled", False)))
+        logger.info("KuaiRand raw features skipped; using the clean schema.")
+    logger.info("KuaiRand raw-feature setting processed. enabled=%s", bool(raw_feature_meta.get("enabled", False)))
 
     logger.info("Encoding user and item ids")
     cardinality, item_lookup = _encode_ids(standard, random)

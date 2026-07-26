@@ -409,7 +409,7 @@ def _evaluate_decision(
     seed: int,
     logger,
 ) -> dict[str, Any]:
-    logger.info("开始评估decision输出。name=%s", name)
+    logger.info("Evaluating decision outputs. name=%s", name)
 
     true_time = np.asarray(eval_arrays["play_time"], dtype=np.float64)
     session = np.asarray(eval_arrays["session_key"], dtype=np.int64)
@@ -428,7 +428,7 @@ def _evaluate_decision(
         metric_valid = np.zeros_like(valid, dtype=bool)
         metric_valid[sample_index] = True
         auc_sampled = True
-        logger.info("fast-eval抽样排序指标。name=%s rows=%s", name, int(fast_eval_rows))
+        logger.info("Fast evaluation uses a row sample for ranking metrics. name=%s rows=%s", name, int(fast_eval_rows))
 
     output = {
         "finite_rows": int(valid.sum()),
@@ -451,5 +451,5 @@ def _evaluate_decision(
         "pred_time_rank": None if bool(fast_eval) else _ranking_metrics(pred, eval_arrays, topks),
     }
 
-    logger.info("decision输出评估完成。name=%s finite=%s", name, int(valid.sum()))
+    logger.info("Decision-output evaluation complete. name=%s finite=%s", name, int(valid.sum()))
     return output

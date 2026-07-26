@@ -96,7 +96,7 @@ RAW_FEATURE_META_DISABLED = {
 
 
 def _read_user_action(config: dict[str, Any], logger) -> pd.DataFrame:
-    logger.info("开始读取WeChat21曝光日志。")
+    logger.info("Reading WeChat21 exposure logs.")
 
     data_cfg = config["data"]
     raw_dir = Path(data_cfg["raw_dir"]).expanduser().resolve()
@@ -116,12 +116,12 @@ def _read_user_action(config: dict[str, Any], logger) -> pd.DataFrame:
         inplace=True,
     )
 
-    logger.info("WeChat21曝光日志读取完成。rows=%s", int(len(frame)))
+    logger.info("WeChat21 exposure logs loaded. rows=%s", int(len(frame)))
     return frame
 
 
 def _read_feed_info(config: dict[str, Any], logger) -> pd.DataFrame:
-    logger.info("开始读取WeChat21 feed metadata。")
+    logger.info("Reading WeChat21 feed metadata.")
 
     data_cfg = config["data"]
     raw_dir = Path(data_cfg["raw_dir"]).expanduser().resolve()
@@ -133,7 +133,7 @@ def _read_feed_info(config: dict[str, Any], logger) -> pd.DataFrame:
     feed.rename(columns={"feedid": "video_id", "videoplayseconds": "duration_sec"}, inplace=True)
     feed = feed.drop_duplicates("video_id", keep="first").copy()
 
-    logger.info("WeChat21 feed metadata读取完成。rows=%s", int(len(feed)))
+    logger.info("WeChat21 feed metadata loaded. rows=%s", int(len(feed)))
     return feed
 
 
@@ -142,7 +142,7 @@ def _numeric(series: pd.Series, default: float = 0.0) -> pd.Series:
 
 
 def _sanitize_and_join(frame: pd.DataFrame, feed: pd.DataFrame, config: dict[str, Any], logger) -> tuple[pd.DataFrame, dict[str, Any]]:
-    logger.info("开始合并WeChat21时长字段。")
+    logger.info("Merging WeChat21 duration fields.")
 
     before_rows = int(len(frame))
     frame["user_id"] = _numeric(frame["user_id"]).astype(np.int64)
@@ -183,11 +183,11 @@ def _sanitize_and_join(frame: pd.DataFrame, feed: pd.DataFrame, config: dict[str
     duration_cap_rows = 0
     max_duration_sec_exclusive = prep.get("max_duration_sec_exclusive")
     if max_duration_sec_exclusive is not None:
-        logger.info("开始过滤WeChat21 duration上限样本。max_duration_sec_exclusive=%s", max_duration_sec_exclusive)
+        logger.info("Filtering WeChat21 samples above the duration limit. max_duration_sec_exclusive=%s", max_duration_sec_exclusive)
         keep = (frame["duration_ms_safe"].to_numpy(np.float64) / 1000.0) < float(max_duration_sec_exclusive)
         duration_cap_rows = int((~keep).sum())
         frame = frame.loc[keep].copy()
-        logger.info("WeChat21 duration上限样本过滤完成。removed=%s", duration_cap_rows)
+        logger.info("Filtered WeChat21 samples above the duration limit. removed=%s", duration_cap_rows)
 
     max_play_ratio = prep.get("max_play_ratio")
     over_ratio_rows = 0
@@ -208,12 +208,12 @@ def _sanitize_and_join(frame: pd.DataFrame, feed: pd.DataFrame, config: dict[str
         "over_max_play_ratio_rows_removed": over_ratio_rows,
         "rows_after_filters": int(len(frame)),
     }
-    logger.info("WeChat21时长字段合并完成。audit=%s", audit)
+    logger.info("WeChat21 duration fields merged. audit=%s", audit)
     return frame.reset_index(drop=True), audit
 
 
 def _construct_events_and_sessions(frame: pd.DataFrame, config: dict[str, Any], upper_bounds: np.ndarray, logger) -> tuple[pd.DataFrame, dict[str, Any]]:
-    logger.info("开始构造WeChat21事件标签和会话字段。")
+    logger.info("Building WeChat21 event labels and session fields.")
 
     taxonomy = config["event_taxonomy"]
     alpha = float(taxonomy.get("alpha", 0.3))
@@ -272,12 +272,12 @@ def _construct_events_and_sessions(frame: pd.DataFrame, config: dict[str, Any], 
         "session_end_count": int(frame["is_session_end"].sum()),
         "timestamp_note": "WeChat21 has no intra-day exposure timestamp; timestamp is reconstructed from user-date row order.",
     }
-    logger.info("WeChat21事件标签和会话字段构造完成。sessions=%s", audit["sessions"])
+    logger.info("WeChat21 event labels and session fields built. sessions=%s", audit["sessions"])
     return frame, audit
 
 
 def _encode_ids(frame: pd.DataFrame, logger) -> dict[str, int]:
-    logger.info("开始编码WeChat21用户和视频ID。")
+    logger.info("Encoding WeChat21 user and video IDs.")
 
     frame["user_idx"] = pd.factorize(frame["user_id"], sort=True)[0].astype(np.int64)
     frame["item_idx"] = pd.factorize(frame["video_id"], sort=True)[0].astype(np.int64)
@@ -286,12 +286,12 @@ def _encode_ids(frame: pd.DataFrame, logger) -> dict[str, int]:
         "num_users": int(frame["user_idx"].max()) + 1,
         "num_items": int(frame["item_idx"].max()) + 1,
     }
-    logger.info("WeChat21用户和视频ID编码完成。users=%s items=%s", cardinality["num_users"], cardinality["num_items"])
+    logger.info("WeChat21 user and video IDs encoded. users=%s items=%s", cardinality["num_users"], cardinality["num_items"])
     return cardinality
 
 
 def _assign_row_shuffle_splits(frame: pd.DataFrame, ratios: list[float], random_state: int, logger) -> pd.Series:
-    logger.info("开始划分WeChat21标准split。")
+    logger.info("Creating the standard WeChat21 split.")
 
     shuffled_index = frame.sample(frac=1.0, random_state=int(random_state)).index.to_numpy()
     n_rows = int(len(shuffled_index))
@@ -303,7 +303,7 @@ def _assign_row_shuffle_splits(frame: pd.DataFrame, ratios: list[float], random_
     split.loc[shuffled_index[n_train:n_val_end]] = "val"
     split.loc[shuffled_index[n_val_end:]] = "test"
     logger.info(
-        "WeChat21标准split划分完成。train=%s val=%s test=%s",
+        "Standard WeChat21 split created. train=%s val=%s test=%s",
         int((split == "train").sum()),
         int((split == "val").sum()),
         int((split == "test").sum()),
@@ -351,13 +351,13 @@ def _machine_tag(value: object, pos: int) -> str:
 
 
 def _add_user_history_features(frame: pd.DataFrame, config: dict[str, Any], logger) -> None:
-    logger.info("开始构造WeChat21用户历史统计特征。")
+    logger.info("Building WeChat21 user-history statistics.")
 
     history_cfg = config.get("user_history_features", {})
     if not bool(history_cfg.get("enabled", False)):
         for name in HISTORY_NUMERIC_NAMES:
             frame[name] = 0.0
-        logger.info("WeChat21用户历史统计特征关闭。")
+        logger.info("WeChat21 user-history statistics disabled.")
         return
 
     grouped = frame.groupby("user_id", sort=False)
@@ -390,7 +390,7 @@ def _add_user_history_features(frame: pd.DataFrame, config: dict[str, Any], logg
         prev_sum = series.groupby(frame["user_id"], sort=False).cumsum().to_numpy(np.float32) - values
         frame[name] = (prev_sum / denom).astype(np.float32)
 
-    logger.info("WeChat21用户历史统计特征构造完成。features=%s", len(HISTORY_NUMERIC_NAMES))
+    logger.info("WeChat21 user-history statistics built. features=%s", len(HISTORY_NUMERIC_NAMES))
 
 
 def _build_item_content_features(
@@ -401,7 +401,7 @@ def _build_item_content_features(
     output_dir: Path,
     logger,
 ) -> dict[str, Any]:
-    logger.info("开始构造WeChat21内容特征。")
+    logger.info("Building WeChat21 content features.")
 
     num_items = int(cardinality["num_items"])
     item_content_path = output_dir / "item_content.npz"
@@ -412,7 +412,7 @@ def _build_item_content_features(
             content_category=np.zeros((num_items, 0), dtype=np.int64),
             content_numeric=np.zeros((num_items, 0), dtype=np.float32),
         )
-        logger.info("WeChat21内容特征关闭，写出空item_content。")
+        logger.info("WeChat21 content features disabled; writing empty item_content.")
         return {
             "enabled": False,
             "num_content_category_levels": 0,
@@ -467,7 +467,7 @@ def _build_item_content_features(
         "category_audit": category_audit,
         "text_features_excluded": True,
     }
-    logger.info("WeChat21内容特征构造完成。levels=%s", meta["num_content_category_levels"])
+    logger.info("WeChat21 content features built. levels=%s", meta["num_content_category_levels"])
     return meta
 
 
@@ -518,7 +518,7 @@ def _save_npz(path: Path, arrays: dict[str, np.ndarray], compressed: bool) -> No
 
 
 def prepare_wechat21(config: dict[str, Any], logger) -> dict[str, Any]:
-    logger.info("开始WeChat21 benchmark预处理。")
+    logger.info("Preprocessing the WeChat21 benchmark.")
 
     output_dir = Path(config["data"]["processed_dir"]).expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -590,5 +590,5 @@ def prepare_wechat21(config: dict[str, Any], logger) -> dict[str, Any]:
     with (output_dir / "manifest.json").open("w", encoding="utf-8") as handle:
         json.dump(manifest, handle, indent=2, ensure_ascii=False)
 
-    logger.info("WeChat21 benchmark预处理完成。split_counts=%s", split_counts)
+    logger.info("WeChat21 benchmark preprocessing complete. split_counts=%s", split_counts)
     return manifest

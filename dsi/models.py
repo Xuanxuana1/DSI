@@ -47,7 +47,7 @@ class RawFeatureEncoder(nn.Module):
     def __init__(self, shape: ModelShape, embedding_dim: int, sparse_embeddings: bool = False) -> None:
         super().__init__()
         logger.info(
-            "开始初始化原始特征编码器。sparse=%d numeric=%d seq_len=%d",
+            "Initializing the raw feature encoder. sparse=%d numeric=%d seq_len=%d",
             len(shape.raw_sparse_cardinalities),
             int(shape.num_raw_numeric_features),
             int(shape.raw_sequence_length),
@@ -69,10 +69,10 @@ class RawFeatureEncoder(nn.Module):
             + int(shape.num_raw_numeric_features)
             + (self.embedding_dim if self.raw_seq_embedding is not None else 0)
         )
-        logger.info("原始特征编码器初始化完成。output_dim=%d", int(self.output_dim))
+        logger.info("Raw feature encoder initialized. output_dim=%d", int(self.output_dim))
 
     def forward(self, batch: dict[str, torch.Tensor], reference: torch.Tensor) -> torch.Tensor:
-        _model_log_once("raw_feature_encoder_forward_start", "开始执行原始特征编码前向。")
+        _model_log_once("raw_feature_encoder_forward_start", "Running the raw feature encoder forward pass.")
 
         batch_size = int(reference.shape[0])
         if self.output_dim == 0:
@@ -101,7 +101,7 @@ class RawFeatureEncoder(nn.Module):
             parts.append(pooled)
 
         output = torch.cat(parts, dim=-1) if parts else reference.new_zeros((batch_size, 0))
-        _model_log_once("raw_feature_encoder_forward_done", "原始特征编码前向完成。")
+        _model_log_once("raw_feature_encoder_forward_done", "Raw feature encoder forward pass complete.")
         return output
 
 
@@ -123,7 +123,7 @@ def _mlp(input_dim: int, hidden_dim: int, output_dim: int, dropout: float, hidde
 
 def _event_threshold_payload(alpha: float, mid_cut: float, beta: float, support_mode: str) -> dict[str, float | str]:
     logger.info(
-        "开始构造事件边界载荷。alpha=%.4f mid_cut=%.4f beta=%.4f support_mode=%s",
+        "Building the event-boundary payload. alpha=%.4f mid_cut=%.4f beta=%.4f support_mode=%s",
         float(alpha),
         float(mid_cut),
         float(beta),
@@ -136,7 +136,7 @@ def _event_threshold_payload(alpha: float, mid_cut: float, beta: float, support_
         "event_beta": float(beta),
         "event_support_mode": str(support_mode),
     }
-    logger.info("事件边界载荷构造完成。")
+    logger.info("Event-boundary payload built.")
     return payload
 
 
@@ -162,7 +162,7 @@ class ObservationSetPosteriorModel(nn.Module):
         posterior_primary_axis: str = "seconds",
     ) -> None:
         super().__init__()
-        logger.info("开始初始化full joint observation-set provider。")
+        logger.info("Initializing full joint observation-set provider.")
 
         self.shape = shape
         self.embedding_dim = int(embedding_dim)
@@ -237,7 +237,7 @@ class ObservationSetPosteriorModel(nn.Module):
         else:
             self.register_buffer("duration_survival_ratio_bounds", torch.zeros(0, dtype=torch.float32), persistent=False)
         logger.info(
-            "full joint observation-set provider初始化完成。watch_dim=%d use_raw=%s primary_axis=%s ratio_bins=%d duration_ratio_buckets=%d survival_bins=%d duration_prior_buckets=%d",
+            "Full joint observation-set provider initialized. watch_dim=%d use_raw=%s primary_axis=%s ratio_bins=%d duration_ratio_buckets=%d survival_bins=%d duration_prior_buckets=%d",
             int(self.watch_dim),
             self.use_raw_features,
             self.posterior_primary_axis,
@@ -249,7 +249,7 @@ class ObservationSetPosteriorModel(nn.Module):
 
     @staticmethod
     def _build_ratio_grid(num_bins: int) -> torch.Tensor:
-        logger.info("开始构造ratio网格。bins=%d", int(num_bins))
+        logger.info("Building the ratio grid. bins=%d", int(num_bins))
 
         if int(num_bins) <= 1:
             values = torch.tensor([10.0], dtype=torch.float32)
@@ -263,11 +263,11 @@ class ObservationSetPosteriorModel(nn.Module):
 
         values = torch.sort(values.float().clamp(1e-3, 10.0)).values
         values[-1] = torch.tensor(10.0, dtype=torch.float32)
-        logger.info("ratio网格构造完成。bins=%d", int(values.numel()))
+        logger.info("Ratio grid built. bins=%d", int(values.numel()))
         return values
 
     def _inputs(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        _model_log_once("obs_set_inputs_start", "开始编码observation-set输入。")
+        _model_log_once("obs_set_inputs_start", "Encoding observation-set inputs.")
 
         user_emb = self.user_embedding(batch["user_idx"])
         item_emb = self.item_embedding(batch["item_idx"])
@@ -287,7 +287,7 @@ class ObservationSetPosteriorModel(nn.Module):
         content = torch.cat(content_parts, dim=-1) if content_parts else item_emb.new_zeros((item_emb.shape[0], 0))
 
         watch_input = torch.cat([user_emb, item_emb, tab_emb, prev_event_emb, batch["numeric"], content], dim=-1)
-        _model_log_once("obs_set_inputs_done", "observation-set输入编码完成。")
+        _model_log_once("obs_set_inputs_done", "Observation-set inputs encoded.")
         return {
             "watch_input": watch_input,
             "user_emb": user_emb,
@@ -295,7 +295,7 @@ class ObservationSetPosteriorModel(nn.Module):
         }
 
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        _model_log_once("full_joint_obs_set_forward_start", "开始执行full joint observation-set前向。")
+        _model_log_once("full_joint_obs_set_forward_start", "Running the full joint observation-set forward pass.")
 
         encoded = self._inputs(batch)
         hidden = self.shared(encoded["watch_input"])
@@ -351,7 +351,7 @@ class ObservationSetPosteriorModel(nn.Module):
             output["duration_survival_logits"] = self.duration_survival_head(hidden)
             output["duration_survival_ratio_bounds"] = self.duration_survival_ratio_bounds
 
-        _model_log_once("full_joint_obs_set_forward_done", "full joint observation-set前向完成。")
+        _model_log_once("full_joint_obs_set_forward_done", "Full joint observation-set forward pass complete.")
         return output
 
 
@@ -378,7 +378,7 @@ class GenericLatentControlModel(ObservationSetPosteriorModel):
             ratio_axis_bins=0,
             duration_survival_bins=0,
         )
-        logger.info("开始初始化generic latent control。latent_dim=%d", int(latent_dim))
+        logger.info("Initializing generic latent control. latent_dim=%d", int(latent_dim))
 
         generic_width = int(shape.num_watch_events) * int(shape.num_time_bins)
         self.generic_norm = nn.LayerNorm(generic_width)
@@ -389,13 +389,13 @@ class GenericLatentControlModel(ObservationSetPosteriorModel):
         self.latent_dim = int(latent_dim)
 
         logger.info(
-            "generic latent control初始化完成。generic_width=%d latent_dim=%d",
+            "Generic latent control initialized. generic_width=%d latent_dim=%d",
             generic_width,
             self.latent_dim,
         )
 
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        _model_log_once("generic_latent_forward_start", "开始执行generic latent前向。")
+        _model_log_once("generic_latent_forward_start", "Running the generic latent forward pass.")
 
         encoded = self._inputs(batch)
         hidden = self.shared(encoded["watch_input"])
@@ -408,7 +408,7 @@ class GenericLatentControlModel(ObservationSetPosteriorModel):
             "event_logits": self.event_head(latent),
             "pred_log_time": self.time_head(latent).squeeze(-1),
         }
-        _model_log_once("generic_latent_forward_done", "generic latent前向完成。")
+        _model_log_once("generic_latent_forward_done", "Generic latent forward pass complete.")
         return output
 
 
@@ -441,21 +441,21 @@ class TimeOnlyPosteriorModel(ObservationSetPosteriorModel):
             ratio_axis_bins=0,
             duration_survival_bins=0,
         )
-        logger.info("开始初始化time-only posterior control。")
+        logger.info("Initializing time-only posterior control.")
         self.time_only_alpha = float(alpha)
         self.time_only_mid_cut = float(mid_cut)
         self.time_only_beta = float(beta)
-        logger.info("time-only posterior control初始化完成。")
+        logger.info("Time-only posterior control initialized.")
 
     def forward(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-        _model_log_once("time_only_posterior_forward_start", "开始执行time-only posterior前向。")
+        _model_log_once("time_only_posterior_forward_start", "Running the time-only posterior forward pass.")
         output = super().forward(batch)
         logits = output["obs_set_logits"]
         time_logits = logits.mean(dim=1, keepdim=True)
         output["obs_set_logits"] = time_logits
         output["num_watch_events"] = 1
         output["posterior_model_type"] = "time_only_posterior"
-        _model_log_once("time_only_posterior_forward_done", "time-only posterior前向完成。")
+        _model_log_once("time_only_posterior_forward_done", "Time-only posterior forward pass complete.")
         return output
 
 
