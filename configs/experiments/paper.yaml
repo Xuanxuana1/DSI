@@ -1,0 +1,97 @@
+main_decision:
+  train_rows: full
+  batch_size: 8192
+  feature_batch_size: 8192
+  scorer: dcn
+  validation_select: mae
+  rank_target: overplay
+  rank_loss_weight: 0.5
+  ordinal_bins: 30
+  ordinal_beta: 3.0
+  ordinal_restore_weight: 30.0
+  ordinal_ce_weight: 0.0
+  ordinal_prior_weight: 0.0
+  hidden_dim: 128
+  hidden_layers: 2
+  cross_layers: 2
+  dropout: 0.1
+  epochs: 5
+  learning_rate: 0.001
+  weight_decay: 0.0001
+
+controlled_decision:
+  train_rows: 1000000
+  batch_size: 8192
+  feature_batch_size: 8192
+  scorer: dcn
+  validation_select: mae
+  rank_target: overplay
+  rank_loss_weight: 0.5
+  ordinal_bins: 30
+  ordinal_beta: 3.0
+  ordinal_restore_weight: 30.0
+  ordinal_ce_weight: 0.0
+  ordinal_prior_weight: 0.0
+  hidden_dim: 128
+  hidden_layers: 2
+  cross_layers: 2
+  dropout: 0.1
+  epochs: 5
+  learning_rate: 0.001
+  weight_decay: 0.0001
+
+time_only_decision:
+  train_rows: 1000000
+  batch_size: 8192
+  feature_batch_size: 8192
+  scorer: dcn
+  validation_select: mae
+  rank_target: overplay
+  rank_loss_weight: 0.5
+  ordinal_bins: 30
+  ordinal_beta: 3.0
+  ordinal_restore_weight: 30.0
+  ordinal_ce_weight: 0.0
+  ordinal_prior_weight: 0.0
+  hidden_dim: 128
+  hidden_layers: 2
+  cross_layers: 2
+  dropout: 0.1
+  epochs: 5
+  learning_rate: 0.001
+  weight_decay: 0.0001
+
+baseline:
+  batch_size: 4096
+  epochs: 5
+  feature_protocol: clean
+
+matched_readout:
+  methods: [d2q, tpm, egmn]
+  train_rows: 1000000
+  baseline_batch_size: 4096
+  readout_batch_size: 8192
+  feature_batch_size: 8192
+  scorer: dcn
+  representation_protocol: hidden_scalar
+  rank_target: overplay
+  validation_select: mae
+  rank_loss_weight: 0.5
+  ordinal_bins: 30
+  ordinal_beta: 3.0
+  ordinal_restore_weight: 30.0
+  epochs: 5
+  learning_rate: 0.001
+
+transfer:
+  sources: [raw, random_dsi, dsi, d2q, tpm, cread, egmn]
+  fractions: [0.01, 0.10, 1.00]
+  input_dim: 82
+  probe_steps: 6000
+  eval_every_steps: 500
+  learning_rate: 0.01
+  batch_size: 8192
+  feature_batch_size: 8192
+  head: linear
+  quantile: 0.75
+  ratio_threshold: 0.5

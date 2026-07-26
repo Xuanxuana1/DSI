@@ -1,0 +1,111 @@
+contract_path: docs/method.md
+
+data:
+  name: WeChat21
+  raw_dir: data/raw/wechat21
+  user_action_file: user_action.csv
+  feed_info_file: feed_info.csv
+  processed_dir: artifacts/processed/wechat21
+  version_suffix: wechat21
+  compressed_npz: false
+
+event_taxonomy:
+  alpha: 0.3
+  mid_completion_cut: 0.9
+  beta: 1.1
+  overplay_band_beta: 1.1
+  gamma_minutes: 30
+  watch_event_names: [early_skip, mid_watch, true_completion, overplay]
+  early_skip_event_id: 0
+  mid_watch_event_id: 1
+  true_completion_event_id: 2
+  overplay_event_id: 3
+
+preprocessing:
+  invalid_duration_policy: drop
+  min_duration_ms: 1
+  max_play_ratio: 10.0
+  max_duration_sec_exclusive: 60.0
+
+content_features:
+  enabled: true
+  tag_slots: 4
+
+user_history_features:
+  enabled: true
+
+raw_features:
+  enabled: false
+  sequence_length: 8
+  include_aggregate_statistics: false
+
+split:
+  unit: row_shuffle_80_10_10
+  ratios: [0.8, 0.1, 0.1]
+  random_state: 1234
+
+time_bins:
+  linear_seconds: 60
+  max_seconds: 1800
+  exponential_growth: 1.5
+
+model:
+  embedding_dim: 32
+  hidden_dim: 128
+  dropout: 0.1
+  sparse_embeddings: true
+  duration_buckets: 5
+  activity_buckets: 5
+  category_buckets: 64
+  wide_hidden_multiplier: 2
+  tpm_tree_bins: 32
+  egmn_components: 10
+  d2q_quantile_bins: 101
+  gr_token_base: 16
+  gr_decoder_layers: 2
+  gr_decoder_heads: 4
+  use_raw_features: false
+
+loss:
+  lambda_obs_set_restore: 1.0
+  obs_set_overplay_loss: observed
+  completion_window_seconds: 2.0
+  completion_window_ratio: 0.05
+
+calibration:
+  enabled: true
+  type: event_marginal
+  max_steps: 3
+
+training:
+  seed: 2027
+  device: cuda:0
+  batch_size: 4096
+  eval_batch_size: 8192
+  epochs: 5
+  patience: 2
+  learning_rate: 0.01
+  sparse_learning_rate: 0.01
+  weight_decay: 0.000001
+  clip_grad_norm: 10.0
+  num_workers: 0
+  block_shuffle_rows: 1048576
+
+evaluation:
+  primary_metric: exact_joint_nll
+  max_batches: null
+  ece_bins: 15
+  cindex_buckets: 5
+  cindex_max_pairs_per_bucket: 2000
+
+debug:
+  max_rows:
+    standard_per_file: null
+    random: null
+  max_train_rows: null
+  max_eval_rows: null
+
+outputs:
+  root_dir: artifacts/runs/wechat21
+  prepare_log: artifacts/logs/prepare_wechat21.log
+  train_log: artifacts/logs/train_wechat21.log
