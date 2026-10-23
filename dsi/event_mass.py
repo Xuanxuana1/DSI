@@ -30,24 +30,14 @@ def _observation_set_support_mask(
     duration = duration_sec.to(device=device, dtype=dtype).clamp_min(1e-3).view(-1, 1, 1)
 
     ratio = upper / duration
-    # "support_aware_overlap" admits every bin whose interval (u_{k-1}, u_k] overlaps the
-    # event's watch-ratio region, so the observed bin b(y) is always legal for its own type.
-    if str(support_mode) == "support_aware_overlap":
-        lower = torch.cat([upper.new_zeros((1, 1, 1)), upper[:, :, :-1]], dim=2)
-        lower_ratio = lower / duration
-    else:
-        lower_ratio = None
+    # Include bins intersecting the event interval, including boundary-straddling bins.
+    lower = torch.cat([upper.new_zeros((1, 1, 1)), upper[:, :, :-1]], dim=2)
+    lower_ratio = lower / duration
     support = torch.zeros_like(logits, dtype=torch.bool)
     if int(num_events) > 0:
-        if lower_ratio is None:
-            support[:, 0, :] = (ratio[:, 0, :] < float(alpha))
-        else:
-            support[:, 0, :] = (lower_ratio[:, 0, :] < float(alpha))
+        support[:, 0, :] = (lower_ratio[:, 0, :] < float(alpha))
     if int(num_events) > 1:
-        if lower_ratio is None:
-            support[:, 1, :] = (ratio[:, 0, :] >= float(alpha)) & (ratio[:, 0, :] < float(mid_cut))
-        else:
-            support[:, 1, :] = (ratio[:, 0, :] >= float(alpha)) & (lower_ratio[:, 0, :] < float(mid_cut))
+        support[:, 1, :] = (ratio[:, 0, :] >= float(alpha)) & (lower_ratio[:, 0, :] < float(mid_cut))
     if int(num_events) > 2:
         duration_bin = torch.bucketize(
             duration_sec.to(device=device, dtype=dtype).clamp_min(1e-3),
@@ -58,7 +48,7 @@ def _observation_set_support_mask(
     if int(num_events) > 3:
         if str(support_mode) == "cumulative":
             support[:, 3, :] = True
-        elif str(support_mode) in {"support_aware", "support_aware_overlap"}:
+        elif str(support_mode) == "support_aware":
             support[:, 3, :] = ratio[:, 0, :] > float(beta)
         else:
             raise ValueError(f"Unsupported event_support_mode: {support_mode}")

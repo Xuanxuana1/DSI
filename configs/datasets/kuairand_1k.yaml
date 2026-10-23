@@ -18,7 +18,6 @@ event_taxonomy:
   mid_watch_event_id: 1
   true_completion_event_id: 2
   overplay_event_id: 3
-  support_mode: support_aware_overlap
 
 preprocessing:
   invalid_duration_policy: drop
